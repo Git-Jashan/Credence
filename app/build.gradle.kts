@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    // Note: Ensure you have your Kotlin Android plugin here too if your project requires it
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -36,10 +37,8 @@ android {
 }
 
 dependencies {
-    // 🚀 PDF Library
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 
-    // 🚀 HARDCODED STABLE VERSIONS TO FIX API 37 ERRORS:
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
@@ -51,7 +50,12 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+
+    // FIXED: Removed the duplicate definition. The BOM manages the version automatically.
     implementation("androidx.compose.material:material-icons-extended")
+
+    implementation("com.google.zxing:core:3.5.3")
+
     // Testing libraries
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

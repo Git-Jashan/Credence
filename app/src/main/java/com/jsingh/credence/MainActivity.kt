@@ -3,7 +3,8 @@ package com.jsingh.credence
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.jsingh.credence.ui.screens.MainApp // <--- Make sure this points to your new MainApp!
+import com.jsingh.credence.ui.screens.MainApp
+import com.jsingh.credence.ui.theme.CredenceTheme
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 
 class MainActivity : ComponentActivity() {
@@ -13,7 +14,9 @@ class MainActivity : ComponentActivity() {
         PDFBoxResourceLoader.init(applicationContext)
 
         setContent {
-            MainApp()
+            CredenceTheme {
+                MainApp()
+            }
         }
     }
 }
