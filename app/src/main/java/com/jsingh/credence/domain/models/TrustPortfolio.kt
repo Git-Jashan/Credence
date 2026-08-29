@@ -2,10 +2,12 @@ package com.jsingh.credence.domain.models
 
 data class TrustPortfolio(
     val score: Int,                 // e.g., 750
+    val previousScore: Int? = null, // last computed score, for the Home screen movement badge (null = no prior reading yet)
     val tier: String,               // e.g., "Gold", "Silver", "Building"
     val safeLoanLimit: Double,
     val vitals: Vitals,
     val recentTransactions: List<Transaction> = emptyList(),
+    val activeLoans: List<ActiveLoan> = emptyList(), // surfaced on Home (next EMI due) and MyScore (full list)
     val bankName: String = "Bank statement",
     val statementPeriodLabel: String = "",
     val statementMonths: Int = 0

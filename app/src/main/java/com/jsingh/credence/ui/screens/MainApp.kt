@@ -16,7 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -26,24 +25,31 @@ import com.jsingh.credence.domain.engine.ScoreCalculator
 import com.jsingh.credence.domain.models.TrustPortfolio
 import com.jsingh.credence.domain.parser.StatementParser
 import com.jsingh.credence.ui.components.PdfPasswordDialog
+import com.jsingh.credence.ui.components.CredenceDrawerSheet
+import com.jsingh.credence.ui.components.AlertsSheet // ✨ Using the clean Alerts Sheet
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import com.jsingh.credence.utils.SessionManager
 
-// --- COLORS & UTILS ---
+// ==========================================
+// 1. GLOBAL COLORS & UTILS
+// ==========================================
 val BgBlack = Color(0xFF09090B)
 val CardDark = Color(0xFF18181B)
-val SilverAccent = Color(0xFFA1A1AA)
 val PrimaryGold = Color(0xFFEAB308)
+val SilverAccent = Color(0xFFA1A1AA)
 val SuccessGreen = Color(0xFF10B981)
+val DangerRed = Color(0xFFEF4444)
 val InfoBlue = Color(0xFF3B82F6)
 val WarnAmber = Color(0xFFF59E0B)
-val DangerRed = Color(0xFFEF4444)
-val SilverGradient = Brush.linearGradient(listOf(Color(0xFFE2E2E2), Color(0xFF71717A)))
-val GoldGradient = Brush.linearGradient(listOf(Color(0xFFFFD700), Color(0xFFB8860B)))
 
-val TIER_ORDER = listOf("Building", "Silver", "Gold")
 fun formatInr(value: Double): String = "\u20B9${value.roundToInt()}"
 
-// --- MODELS & MOCK DATA ---
+// ==========================================
+// 2. DATA MODELS & CATALOG
+// ==========================================
 enum class ListingCategory { SCHEME, LENDER }
 enum class SchemeStage(val label: String) { NOT_APPLIED("Not Applied"), APPLIED("Applied"), UNDER_VERIFICATION("Under Verification"), APPROVED("Approved"), DISBURSED("Disbursed") }
 data class LoanListing(val id: String, val title: String, val amount: Double, val rateLabel: String, val badge: String, val category: ListingCategory, val explainer: String? = null)
@@ -63,70 +69,210 @@ fun sampleCardActivity(): List<CardTapTransaction> = listOf(
     CardTapTransaction("Ganesh Hardware Store", "Cart & Equipment", 850.0, true, "3 days ago")
 )
 
-// --- MAIN SCAFFOLD ---
+// ==========================================
+// 3. MAIN APP ROUTER
+// ==========================================
+@Composable
+fun MainApp(
+    incomingSharedUri: Uri? = null,
+    onSharedUriHandled: () -> Unit = {}
+) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+
+    var initialPortfolio by remember {
+        mutableStateOf(
+            if (sessionManager.isOnboarded()) {
+                val cachedTxns = sessionManager.getCachedTransactions()
+                if (cachedTxns.isNotEmpty()) ScoreCalculator.calculateScore(cachedTxns) else null
+            } else null
+        )
+    }
+
+    var isAppUnlocked by remember { mutableStateOf(sessionManager.isOnboarded() && initialPortfolio != null) }
+
+    LaunchedEffect(Unit) {
+        if (sessionManager.isOnboarded() && initialPortfolio == null) {
+            sessionManager.clearSession()
+            isAppUnlocked = false
+        }
+    }
+
+    var globalParseError by remember { mutableStateOf<String?>(null) }
+    var pendingOnboardingUri by remember { mutableStateOf<Uri?>(null) }
+
+    LaunchedEffect(incomingSharedUri) {
+        if (incomingSharedUri != null && !isAppUnlocked) {
+            pendingOnboardingUri = incomingSharedUri
+        }
+    }
+
+    if (!isAppUnlocked) {
+        OnboardingFlow(
+            incomingUri = pendingOnboardingUri,
+            onClearIncomingUri = { pendingOnboardingUri = null; onSharedUriHandled() },
+            onFinishOnboarding = { rawText ->
+                CoroutineScope(Dispatchers.Main).launch {
+                    try {
+                        val result = StatementParser.processStatement(rawText)
+                        if (result.transactions.isNotEmpty()) {
+                            sessionManager.saveOnboardingSession(result)
+                            initialPortfolio = ScoreCalculator.calculateScore(result.transactions)
+                            isAppUnlocked = true
+                        } else {
+                            globalParseError = "No valid transactions recognized. Please verify the statement."
+                        }
+                    } catch (e: Exception) {
+                        globalParseError = "Failed to parse document: ${e.message}"
+                    }
+                }
+            }
+        )
+    } else {
+        CredenceDashboard(
+            preLoadedPortfolio = initialPortfolio,
+            onResetApp = {
+                sessionManager.clearSession()
+                initialPortfolio = null
+                isAppUnlocked = false
+            }
+        )
+    }
+
+    globalParseError?.let { msg ->
+        AlertDialog(
+            onDismissRequest = { globalParseError = null },
+            confirmButton = { TextButton(onClick = { globalParseError = null }) { Text("OK", color = PrimaryGold) } },
+            containerColor = CardDark,
+            title = { Text("Error", color = Color.White) },
+            text = { Text(msg, color = SilverAccent) }
+        )
+    }
+}
+
+// ==========================================
+// 4. THE DASHBOARD UI
+// ==========================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainApp() {
+fun CredenceDashboard(
+    preLoadedPortfolio: TrustPortfolio?,
+    onResetApp: () -> Unit
+) {
     val context = LocalContext.current
-    var portfolio by remember { mutableStateOf<TrustPortfolio?>(null) }
+    val sessionManager = remember { SessionManager(context) }
+
+    val userName = remember { sessionManager.getUserName() }
+    val businessType = remember { sessionManager.getBusinessType() }
+    val accountNumber = remember { sessionManager.getAccountNumber() }
+
+    var portfolio by remember { mutableStateOf<TrustPortfolio?>(preLoadedPortfolio) }
+    LaunchedEffect(preLoadedPortfolio) { portfolio = preLoadedPortfolio }
+
     var selectedTab by remember { mutableIntStateOf(0) }
     var selectedPdfUri by remember { mutableStateOf<Uri?>(null) }
     var showDialog by remember { mutableStateOf(false) }
     var parseError by remember { mutableStateOf<String?>(null) }
+    var showBankSelector by remember { mutableStateOf(false) }
+
+    // ✨ Alerts Sheet State (Cleaned up from Tracker)
+    var showAlertsSheet by remember { mutableStateOf(false) }
+
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
     val pdfPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) { selectedPdfUri = uri; showDialog = true }
     }
 
+    if (showBankSelector) {
+        BankSelectionSheet(onDismiss = { showBankSelector = false }, onManualUploadClick = { pdfPickerLauncher.launch("application/pdf") })
+    }
+
     if (showDialog && selectedPdfUri != null) {
-        PdfPasswordDialog(context = context, pdfUri = selectedPdfUri!!, onDismiss = { showDialog = false }, onSuccess = { rawText ->
-            try {
-                val transactions = StatementParser.processStatement(rawText)
-                if (transactions.isEmpty()) parseError = "No transactions found in this PDF." else portfolio = ScoreCalculator.calculateScore(transactions)
-            } catch (e: Exception) { parseError = e.message }
-        })
+        PdfPasswordDialog(
+            context = context, pdfUri = selectedPdfUri!!, onDismiss = { showDialog = false },
+            onSuccess = { rawText ->
+                showDialog = false
+                CoroutineScope(Dispatchers.Main).launch {
+                    try {
+                        val result = StatementParser.processStatement(rawText)
+                        if (result.transactions.isEmpty()) parseError = "No valid transactions found in this PDF."
+                        else portfolio = ScoreCalculator.calculateScore(result.transactions)
+                    } catch (e: Exception) { parseError = e.message }
+                }
+            }
+        )
     }
 
     parseError?.let { msg ->
         AlertDialog(onDismissRequest = { parseError = null }, confirmButton = { TextButton(onClick = { parseError = null }) { Text("OK", color = PrimaryGold) } }, containerColor = CardDark, title = { Text("Error", color = Color.White) }, text = { Text(msg, color = SilverAccent) })
     }
 
-    Scaffold(
-        containerColor = BgBlack,
-        topBar = {
-            TopAppBar(
-                title = { Column { Text("Credence", fontWeight = FontWeight.Bold, color = Color.White); Text("Your portable loan trust score", color = SilverAccent, fontSize = 11.sp) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgBlack),
-                actions = {
-                    Row(modifier = Modifier.padding(end = 16.dp).clip(RoundedCornerShape(20.dp)).background(Color(0xFF27272A)).padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (portfolio != null) SuccessGreen else SilverAccent))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (portfolio != null) "${portfolio?.tier} tier" else "No statement", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                    }
-                }
-            )
-        },
-        bottomBar = {
-            NavigationBar(containerColor = CardDark, contentColor = SilverAccent) {
-                NavigationBarItem(icon = { Icon(Icons.Default.Home, "Home") }, label = { Text("Home") }, selected = selectedTab == 0, onClick = { selectedTab = 0 }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, indicatorColor = Color(0xFF27272A)))
-                NavigationBarItem(icon = { Icon(Icons.Default.Search, "Loans") }, label = { Text("Loans") }, selected = selectedTab == 1, onClick = { selectedTab = 1 }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, indicatorColor = Color(0xFF27272A)))
-                NavigationBarItem(icon = { Icon(Icons.Default.Person, "Score") }, label = { Text("My Score") }, selected = selectedTab == 2, onClick = { selectedTab = 2 }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, indicatorColor = Color(0xFF27272A)))
-            }
+    // ✨ Render the clean Alerts Sheet when Bell is clicked
+    if (showAlertsSheet) {
+        AlertsSheet(portfolio = portfolio, onDismiss = { showAlertsSheet = false })
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            CredenceDrawerSheet(userName, businessType, accountNumber, onClose = { scope.launch { drawerState.close() } }, onResetApp = onResetApp)
         }
-    ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            when (selectedTab) {
-                0 -> HomeTab(portfolio, onUploadClick = { pdfPickerLauncher.launch("application/pdf") }, onNavigateToLoans = { selectedTab = 1 })
-                1 -> SchemesAndLendersTab(portfolio) { pdfPickerLauncher.launch("application/pdf") }
-                2 -> MyScoreTab(portfolio) { portfolio = null }
+    ) {
+        Scaffold(
+            containerColor = BgBlack,
+            topBar = {
+                TopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Open Menu", tint = Color.White)
+                        }
+                    },
+                    title = { Text("Credence", fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = Color.White) },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = BgBlack),
+                    actions = {
+                        Row(
+                            modifier = Modifier.padding(end = 12.dp).clip(RoundedCornerShape(20.dp)).background(Color(0xFF27272A)).padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (portfolio != null) SuccessGreen else SilverAccent))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(if (portfolio != null) portfolio?.tier ?: "" else "No Profile", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        }
+                        // ✨ Notification Bell properly wired to showAlertsSheet
+                        IconButton(onClick = { showAlertsSheet = true }, modifier = Modifier.padding(end = 8.dp)) {
+                            BadgedBox(badge = { if (portfolio != null) { Badge(containerColor = DangerRed, modifier = Modifier.size(10.dp)) } }) {
+                                Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = SilverAccent, modifier = Modifier.size(26.dp))
+                            }
+                        }
+                    }
+                )
+            },
+            bottomBar = {
+                NavigationBar(containerColor = CardDark, contentColor = SilverAccent) {
+                    NavigationBarItem(icon = { Icon(Icons.Default.Home, "Home") }, label = { Text("Home") }, selected = selectedTab == 0, onClick = { selectedTab = 0 }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, indicatorColor = Color(0xFF27272A)))
+                    NavigationBarItem(icon = { Icon(Icons.Default.Search, "Loans") }, label = { Text("Loans") }, selected = selectedTab == 1, onClick = { selectedTab = 1 }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, indicatorColor = Color(0xFF27272A)))
+                    NavigationBarItem(icon = { Icon(Icons.Default.Person, "Profile") }, label = { Text("Profile") }, selected = selectedTab == 2, onClick = { selectedTab = 2 }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, indicatorColor = Color(0xFF27272A)))
+                }
+            }
+        ) { innerPadding ->
+            Box(modifier = Modifier.padding(innerPadding)) {
+                when (selectedTab) {
+                    0 -> HomeTab(portfolio, userName, onUploadClick = { showBankSelector = true }, onNavigateToLoans = { selectedTab = 1 })
+                    1 -> SchemesAndLendersTab(portfolio, onUploadClick = { showBankSelector = true }, onNavigateToCard = { selectedTab = 2 })
+                    2 -> MyScoreTab(portfolio, userName, businessType, onResetData = onResetApp)
+                }
             }
         }
     }
 }
 
-// --- SHARED UI COMPONENTS ---
+// ==========================================
+// 5. SHARED UI COMPONENTS
+// ==========================================
 @Composable
-fun LoanOfferCard(title: String, amount: String, rate: String, badge: String, isHighlighted: Boolean = false, ctaLabel: String = "Apply", onApply: () -> Unit) {
+fun LoanOfferCard(title: String, amount: String, rate: String, badge: String, isHighlighted: Boolean = false, ctaLabel: String = "Apply Now", onApply: () -> Unit) {
     Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if (isHighlighted) Color(0xFF27272A) else CardDark).border(1.dp, if (isHighlighted) PrimaryGold.copy(alpha = 0.5f) else Color(0xFF27272A), RoundedCornerShape(20.dp)).padding(20.dp)) {
         Column {
             Text(badge, color = if (isHighlighted) PrimaryGold else SilverAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)

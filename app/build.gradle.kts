@@ -50,7 +50,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+    implementation("com.google.code.gson:gson:2.10.1")
     // FIXED: Removed the duplicate definition. The BOM manages the version automatically.
     implementation("androidx.compose.material:material-icons-extended")
 
