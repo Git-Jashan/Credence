@@ -1,5 +1,6 @@
 package com.jsingh.credence.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,22 +21,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jsingh.credence.domain.models.ActiveLoan
-import com.jsingh.credence.domain.models.LoanStatus
 import com.jsingh.credence.domain.models.TrustPortfolio
 import com.jsingh.credence.ui.components.TrustScoreGaugeCard
-import com.jsingh.credence.ui.components.UnifiedInsightsCard
-import com.jsingh.credence.ui.theme.PrimaryGold
-import com.jsingh.credence.ui.theme.SilverAccent
-import com.jsingh.credence.ui.theme.SuccessGreen
 
 @Composable
 fun HomeTab(
     portfolio: TrustPortfolio?,
     userName: String,
     onUploadClick: () -> Unit,
-    onNavigateToLoans: () -> Unit,
-    onNavigateToActiveLoan: (String) -> Unit = {}
+    onNavigateToLoans: () -> Unit
 ) {
     val listings = remember(portfolio) { if (portfolio != null) LoanCatalog.build(portfolio) else emptyList() }
 
@@ -43,7 +37,9 @@ fun HomeTab(
         modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
+        // ==========================================
         // 1. PERSONALIZED HEADER
+        // ==========================================
         item {
             Spacer(modifier = Modifier.height(8.dp))
             val firstName = userName.split(" ").firstOrNull() ?: "there"
@@ -51,7 +47,9 @@ fun HomeTab(
             Text("Trust Dashboard", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         }
 
+        // ==========================================
         // 2. THE BIG NUMBER & COACHING
+        // ==========================================
         item {
             if (portfolio == null) {
                 UploadPromptCard(onUploadClick)
@@ -59,19 +57,12 @@ fun HomeTab(
                 Column {
                     TrustScoreGaugeCard(portfolio)
 
-                    portfolio.previousScore?.let { previous ->
-                        Spacer(modifier = Modifier.height(10.dp))
-                        ScoreMovementBadge(current = portfolio.score, previous = previous)
-                    }
-
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // ✨ UPGRADED: Authentic Coaching Strip
                     ScoreCoachingStrip(portfolio.tier)
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(28.dp))
 
-                    // ✨ NEW: Quick Actions
                     QuickActionsRow(onNavigateToLoans, onUploadClick)
                 }
             }
@@ -79,55 +70,53 @@ fun HomeTab(
 
         if (portfolio != null) {
 
-            // 3. WHAT'S DUE
-            val nextDue = portfolio.activeLoans
-                .filter { it.status == LoanStatus.ACTIVE }
-                .minByOrNull { it.nextEmiDate }
-
-            if (nextDue != null) {
-                item {
-                    Text("Your Active Loan", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    ActiveLoanStatusCard(loan = nextDue, onClick = { onNavigateToActiveLoan(nextDue.id) })
-                }
-            } else {
-                // 4. THE INSTANT ACTION
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Top Pre-Approved Match", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                        TextButton(onClick = onNavigateToLoans) {
-                            Text("View Market", color = PrimaryGold, fontSize = 13.sp)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    val topOffer = listings.firstOrNull()
-                    topOffer?.let {
-                        LoanOfferCard(
-                            title = it.title,
-                            amount = formatInr(it.amount),
-                            rate = it.rateLabel,
-                            badge = it.badge,
-                            isHighlighted = true,
-                            ctaLabel = "Claim Funds",
-                            onApply = onNavigateToLoans
-                        )
-                    }
-                }
-            }
-
-            // 5. THE PROOF
+            // ==========================================
+            // 3. ✨ PRO-FINTECH PORTFOLIO SNAPSHOT
+            // ==========================================
             item {
-                Text("Verification Engine", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Portfolio Snapshot", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text("View All", color = SilverAccent, fontSize = 13.sp, modifier = Modifier.clickable { onNavigateToLoans() })
+                }
                 Spacer(modifier = Modifier.height(12.dp))
-                UnifiedInsightsCard(portfolio)
+                PortfolioSnapshotCard(onClick = onNavigateToLoans)
             }
 
-            // 6. UPGRADED DATA FRESHNESS
+            // ==========================================
+            // 4. NEW LISTING FOR YOU
+            // ==========================================
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("New Listing for You", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Market", color = PrimaryGold, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clickable { onNavigateToLoans() })
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val topOffer = listings.firstOrNull()
+                topOffer?.let {
+                    LoanOfferCard(
+                        title = it.title,
+                        amount = formatInr(it.amount),
+                        rate = it.rateLabel,
+                        badge = it.badge,
+                        isHighlighted = true,
+                        ctaLabel = "Review Offer",
+                        onApply = onNavigateToLoans
+                    )
+                }
+            }
+
+            // ==========================================
+            // 5. DATA FRESHNESS STRIP
+            // ==========================================
             item {
                 DataFreshnessStrip(portfolio = portfolio, onUpdateClick = onUploadClick)
             }
@@ -137,24 +126,24 @@ fun HomeTab(
 }
 
 // ==========================================
-// ✨ UPGRADED: Authentic Coaching Strip
+// Coaching Strip
 // ==========================================
 @Composable
 fun ScoreCoachingStrip(tier: String) {
-    val (icon, tint, message) = when (tier) {
-        "Prime" -> Triple(
+    val (icon, tint, message) = when (tier.lowercase()) {
+        "prime", "gold" -> Triple(
             Icons.Default.VerifiedUser,
             PrimaryGold,
             "Excellent standing! You qualify for maximum limits and the lowest MFI interest rates."
         )
-        "Trusted" -> Triple(
+        "trusted", "silver" -> Triple(
             Icons.Default.ThumbUp,
             SuccessGreen,
             "Good reliability! Maintain steady daily transactions for 2 more months to unlock Prime."
         )
         else -> Triple(
             Icons.Default.Lightbulb,
-            Color(0xFF3B82F6),
+            InfoBlue,
             "Avoid bank penalties and keep your balance above zero to build lender trust."
         )
     }
@@ -170,21 +159,22 @@ fun ScoreCoachingStrip(tier: String) {
     ) {
         Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(12.dp))
-        Text(message, color = Color(0xFFE4E4E7), fontSize = 13.sp, lineHeight = 18.sp)
+        Text(message, color = Color.White, fontSize = 12.sp, lineHeight = 16.sp)
     }
 }
 
 // ==========================================
-// Quick Actions Row
+// 4-Grid Quick Actions
 // ==========================================
 @Composable
 fun QuickActionsRow(onNavigateToLoans: () -> Unit, onUploadClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        QuickActionButton("Schemes", Icons.Default.AccountBalance, onNavigateToLoans)
-        QuickActionButton("Lenders", Icons.Default.Storefront, onNavigateToLoans)
+        QuickActionButton("Market", Icons.Default.Storefront, onNavigateToLoans)
+        QuickActionButton("Applications", Icons.Default.Assignment, onNavigateToLoans)
+        QuickActionButton("Ongoing", Icons.Default.AccountBalanceWallet, onNavigateToLoans)
         QuickActionButton("Update", Icons.Default.Sync, onUploadClick)
     }
 }
@@ -196,106 +186,123 @@ fun QuickActionButton(label: String, icon: ImageVector, onClick: () -> Unit) {
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF18181B))
+                .background(CardDark)
                 .border(1.dp, Color(0xFF27272A), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = label, tint = PrimaryGold, modifier = Modifier.size(24.dp))
+            Icon(icon, contentDescription = label, tint = PrimaryGold, modifier = Modifier.size(22.dp))
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(label, color = SilverAccent, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Medium)
     }
 }
 
 // ==========================================
-// Score movement
+// ✨ COOKED: Full-Width Stacked Ledger View
 // ==========================================
 @Composable
-fun ScoreMovementBadge(current: Int, previous: Int) {
-    val delta = current - previous
-    if (delta == 0) return
-
-    val isUp = delta > 0
-    val color = if (isUp) SuccessGreen else Color(0xFFEF4444)
-    val icon = if (isUp) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward
-
-    Row(
-        modifier = Modifier
-            .background(color.copy(alpha = 0.12f), RoundedCornerShape(999.dp))
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            "${if (isUp) "+" else ""}$delta this week",
-            color = color,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-}
-
-// ==========================================
-// Active Loan status
-// ==========================================
-@Composable
-fun ActiveLoanStatusCard(loan: ActiveLoan, onClick: () -> Unit) {
+fun PortfolioSnapshotCard(onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF18181B)),
-        shape = RoundedCornerShape(20.dp)
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = CardDark),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, Color(0xFF27272A))
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+
+            // ------------------------------------------
+            // ITEM 1: Active Loan & EMI
+            // ------------------------------------------
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(loan.lenderName, color = SilverAccent, fontSize = 13.sp)
-                    Text(
-                        "Next EMI: ${formatInr(loan.nextEmiAmount)}",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                // Icon
+                Box(
+                    modifier = Modifier.size(44.dp).clip(CircleShape).background(InfoBlue.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Payments, contentDescription = null, tint = InfoBlue, modifier = Modifier.size(22.dp))
                 }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("Due", color = SilverAccent, fontSize = 12.sp)
-                    Text(loan.nextEmiDate, color = PrimaryGold, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // Detailed Text
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("PM SVaNidhi Scheme", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("EMI: ₹1,250", color = SilverAccent, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(Color(0xFF3F3F46)))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Due 05 Sep", color = WarnAmber, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
+
+                // Chevron Arrow
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFF3F3F46))
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = Color(0xFF27272A))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            LinearProgressIndicator(
-                progress = { loan.progress },
-                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                color = PrimaryGold,
-                trackColor = Color(0xFF27272A),
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                "${loan.monthsPaid} of ${loan.tenureMonths} months paid — on-time payments raise your score",
-                color = SilverAccent,
-                fontSize = 12.sp
-            )
+            // ------------------------------------------
+            // ITEM 2: Application Progress
+            // ------------------------------------------
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Icon
+                Box(
+                    modifier = Modifier.size(44.dp).clip(CircleShape).background(PrimaryGold.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Autorenew, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(22.dp))
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // Detailed Progress Data
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("MFI Micro-Loan", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        LinearProgressIndicator(
+                            progress = { 0.5f },
+                            modifier = Modifier.width(60.dp).height(4.dp).clip(RoundedCornerShape(2.dp)),
+                            color = PrimaryGold,
+                            trackColor = Color(0xFF27272A)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Verifying Docs", color = SilverAccent, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+
+                // Status Pill
+                Box(
+                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(PrimaryGold.copy(alpha = 0.1f)).padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text("PENDING", color = PrimaryGold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+                }
+            }
         }
     }
 }
 
 // ==========================================
-// Upgraded Data freshness strip
+// Data Freshness Strip
 // ==========================================
 @Composable
 fun DataFreshnessStrip(portfolio: TrustPortfolio, onUpdateClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF18181B), RoundedCornerShape(16.dp))
-            .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+            .background(CardDark, RoundedCornerShape(16.dp))
+            .border(1.dp, Color(0xFF27272A), RoundedCornerShape(16.dp))
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -304,22 +311,20 @@ fun DataFreshnessStrip(portfolio: TrustPortfolio, onUpdateClick: () -> Unit) {
             tint = SuccessGreen,
             modifier = Modifier.size(24.dp)
         )
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 "Verified via ${portfolio.bankName}",
                 color = Color.White,
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 "${portfolio.statementMonths} months data • ${portfolio.recentTransactions.size} txns",
                 color = SilverAccent,
                 fontSize = 12.sp
             )
-        }
-        TextButton(onClick = onUpdateClick) {
-            Text("Update", color = PrimaryGold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

@@ -1,16 +1,14 @@
 package com.jsingh.credence.ui.components
 
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,31 +19,45 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jsingh.credence.domain.models.TrustPortfolio
-import com.jsingh.credence.ui.theme.PrimaryGold
-import com.jsingh.credence.ui.theme.SilverAccent
-import com.jsingh.credence.ui.theme.SuccessGreen
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.sin
+
+// Local colors to ensure no import conflicts
+private val PrimaryGold = Color(0xFFEAB308)
+private val BrightSilver = Color(0xFFE4E4E7)
+private val SuccessGreen = Color(0xFF10B981)
+private val WarnAmber = Color(0xFFF59E0B)
+private val DangerRed = Color(0xFFEF4444)
+private val InfoBlue = Color(0xFF3B82F6)
+private val SilverAccent = Color(0xFFA1A1AA)
+private val CardDark = Color(0xFF18181B)
 
 @Composable
 fun TrustScoreGaugeCard(portfolio: TrustPortfolio) {
     // 1. Core Data Setup
     val progress = (portfolio.score / 100f).coerceIn(0f, 1f)
 
-    // ✨ FIX: Updated to map to the new Trust Level language from ScoreCalculator
+    // Tier mapping for the main gauge colors
     val tierColor = when (portfolio.tier.lowercase()) {
-        "prime" -> PrimaryGold // Prime replaces Gold
-        "trusted" -> SuccessGreen // Trusted replaces Silver
-        else -> Color(0xFF3B82F6) // Building gets a calm InfoBlue
+        "prime", "gold" -> PrimaryGold
+        "trusted" -> SuccessGreen
+        "silver" -> BrightSilver
+        else -> InfoBlue
+    }
+
+    // Dynamic confidence logic based on score
+    val (confidenceText, confidenceColor) = when {
+        portfolio.score >= 80 -> "High" to SuccessGreen
+        portfolio.score >= 40 -> "Medium" to WarnAmber
+        else -> "Low" to DangerRed
     }
 
     val formattedLimit = NumberFormat.getNumberInstance(Locale("en", "IN")).format(portfolio.safeLoanLimit.toInt())
@@ -59,12 +71,12 @@ fun TrustScoreGaugeCard(portfolio: TrustPortfolio) {
         label = "gaugeAnimation"
     )
 
-    // 3. Metallic/Glassmorphism Background Brush
+    // 3. Premium Glassmorphism Background
     val cardBackgroundBrush = Brush.linearGradient(
         colors = listOf(
-            Color(0xFF18181B), // Deep Base
-            Color(0xFF18181B),
-            tierColor.copy(alpha = 0.12f) // Light tier reflection on the top-right edge
+            CardDark,
+            CardDark,
+            tierColor.copy(alpha = 0.08f)
         ),
         start = Offset(0f, Float.POSITIVE_INFINITY),
         end = Offset(Float.POSITIVE_INFINITY, 0f)
@@ -73,21 +85,23 @@ fun TrustScoreGaugeCard(portfolio: TrustPortfolio) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(24.dp, RoundedCornerShape(20.dp), spotColor = tierColor.copy(alpha = 0.25f)),
+            .shadow(16.dp, RoundedCornerShape(20.dp), spotColor = tierColor.copy(alpha = 0.15f)),
         shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, Color(0xFF27272A).copy(alpha = 0.8f))
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(cardBackgroundBrush)
-                .padding(horizontal = 24.dp, vertical = 24.dp), // Perfected Breathing Room
+                .border(1.dp, Color(0xFF27272A), RoundedCornerShape(20.dp))
+               // This perfectly counters the open "gap" at the bottom of the gauge!
+                .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
 
             // ==========================================
-            // LEFT: The Advanced Trigonometric Gauge
+            // LEFT: The Smooth Trigonometric Gauge
             // ==========================================
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(110.dp)) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
@@ -97,17 +111,13 @@ fun TrustScoreGaugeCard(portfolio: TrustPortfolio) {
                     val sweep = 270f
                     val startAngle = -225f
 
-                    // Dotted/Dashed Digital Background Track
+                    // Smooth, solid background track
                     drawArc(
-                        color = Color(0xFF27272A),
+                        color = Color(0xFF27272A).copy(alpha = 0.5f),
                         startAngle = startAngle,
                         sweepAngle = sweep,
                         useCenter = false,
-                        style = Stroke(
-                            width = stroke,
-                            cap = StrokeCap.Round,
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()), 0f)
-                        ),
+                        style = Stroke(width = stroke, cap = StrokeCap.Round),
                         size = arcSize,
                         topLeft = topLeft
                     )
@@ -115,7 +125,7 @@ fun TrustScoreGaugeCard(portfolio: TrustPortfolio) {
                     // The Solid Foreground Gradient Progress
                     drawArc(
                         brush = Brush.linearGradient(
-                            colors = listOf(tierColor.copy(alpha = 0.3f), tierColor),
+                            colors = listOf(tierColor.copy(alpha = 0.2f), tierColor),
                             start = Offset(0f, size.height),
                             end = Offset(size.width, 0f)
                         ),
@@ -136,13 +146,11 @@ fun TrustScoreGaugeCard(portfolio: TrustPortfolio) {
                         val dotX = center.x + radius * cos(angleInRadians)
                         val dotY = center.y + radius * sin(angleInRadians)
 
-                        // Outer Glow
                         drawCircle(
                             color = tierColor.copy(alpha = 0.4f),
                             radius = 6.dp.toPx(),
                             center = Offset(dotX, dotY)
                         )
-                        // Inner Core
                         drawCircle(
                             color = Color.White,
                             radius = 3.dp.toPx(),
@@ -152,87 +160,80 @@ fun TrustScoreGaugeCard(portfolio: TrustPortfolio) {
                 }
 
                 // Centered Score Text
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.offset(y = 4.dp)) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.offset(y = (-4).dp)) {
                     Text(
                         text = "${portfolio.score}",
                         color = Color.White,
-                        fontSize = 36.sp,
+                        fontSize = 34.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = (-1).sp
                     )
                     Text(
-                        text = "/ 100",
-                        color = SilverAccent.copy(alpha = 0.7f),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "OUT OF 100",
+                        color = SilverAccent,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
                     )
                 }
             }
 
             // ==========================================
-            // RIGHT: Data & Mini-Graph Stack
+            // RIGHT: Perfectly Vertically Centered Content
             // ==========================================
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = 24.dp),
-                horizontalAlignment = Alignment.End
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.Center
             ) {
-                // Tier Badge
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(tierColor.copy(alpha = 0.15f))
-                        .border(1.dp, tierColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Icon(imageVector = Icons.Default.VerifiedUser, contentDescription = null, tint = tierColor, modifier = Modifier.size(12.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-
-                    // ✨ FIX: Removed the word "Tier", updated formatting
+                // TOP: Borrowing Power Limit
+                Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "${portfolio.tier} STATUS".uppercase(),
-                        color = tierColor,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
+                        text = "SAFE LIMIT",
+                        color = SilverAccent,
+                        fontSize = 11.sp,
+                        letterSpacing = 1.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "₹$formattedLimit",
+                        color = Color.White,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = (-0.5).sp
                     )
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-                // Borrowing Power Label
-                Text(
-                    text = "PRE-APPROVED LIMIT",
-                    color = SilverAccent,
-                    fontSize = 10.sp,
-                    letterSpacing = 1.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                // BOTTOM: Dynamic Confidence Pill Badge
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Confidence:",
+                        color = SilverAccent,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
 
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // Formatted Currency
-                Text(
-                    text = "₹$formattedLimit",
-                    color = Color.White,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Black
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // The "Data Depth" Mini-Graph
-                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("DATA CONFIDENCE", color = SilverAccent.copy(alpha = 0.6f), fontSize = 8.sp, letterSpacing = 0.5.sp, modifier = Modifier.padding(bottom = 1.dp, end = 4.dp))
-
-                    // Bar 1 (Small)
-                    Box(modifier = Modifier.size(width = 4.dp, height = 6.dp).clip(RoundedCornerShape(2.dp)).background(tierColor.copy(alpha = 0.4f)))
-                    // Bar 2 (Medium)
-                    Box(modifier = Modifier.size(width = 4.dp, height = 10.dp).clip(RoundedCornerShape(2.dp)).background(tierColor.copy(alpha = 0.7f)))
-                    // Bar 3 (Tall/Glowing)
-                    Box(modifier = Modifier.size(width = 4.dp, height = 14.dp).clip(RoundedCornerShape(2.dp)).background(tierColor).shadow(4.dp, spotColor = tierColor))
+                    // ✨ FIX 2: Added a tinted pill background explicitly around the confidence status
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(tierColor.copy(alpha = 0.15f))
+                            .padding(horizontal = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = confidenceText.uppercase(),
+                            color = tierColor,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
                 }
             }
         }

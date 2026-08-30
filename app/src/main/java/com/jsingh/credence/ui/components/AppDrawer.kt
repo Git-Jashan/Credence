@@ -1,7 +1,5 @@
 package com.jsingh.credence.ui.components
 
-import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,14 +23,17 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+// Import the separated Modals and Dialogs
+import com.jsingh.credence.ui.dialogs.CardSecurityDialog
+import com.jsingh.credence.ui.dialogs.LanguageDialog
+import com.jsingh.credence.ui.dialogs.WipeDataConfirmDialog
+import com.jsingh.credence.ui.sheets.ProfileSettingsSheet
+
 // 100% Local Colors
 private val BgBlack = Color(0xFF09090B)
 private val CardDark = Color(0xFF18181B)
 private val PrimaryGold = Color(0xFFEAB308)
 private val SilverAccent = Color(0xFFA1A1AA)
-private val DangerRed = Color(0xFFEF4444)
-private val SuccessGreen = Color(0xFF10B981)
-private val InfoBlue = Color(0xFF3B82F6)
 
 @Composable
 fun CredenceDrawerSheet(
@@ -45,55 +46,84 @@ fun CredenceDrawerSheet(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // Action States
+    // Elegant State Hoisting
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showCardSecurityDialog by remember { mutableStateOf(false) }
     var isGeneratingPdf by remember { mutableStateOf(false) }
+    var showProfileSheet by remember { mutableStateOf(false) }
+    var showWipeConfirmDialog by remember { mutableStateOf(false) }
 
-    ModalDrawerSheet(
-        drawerContainerColor = CardDark,
-        modifier = Modifier.width(320.dp) // Slightly wider for better text layout
-    ) {
+    ModalDrawerSheet(drawerContainerColor = CardDark, modifier = Modifier.width(320.dp)) {
+
         // ==================================================
-        // 1. VERIFIED HEADER
+        // 1. ✨ FULL-WIDTH DARK HEADER (Perfectly Aligned)
         // ==================================================
-        Box(modifier = Modifier.fillMaxWidth().background(BgBlack).padding(24.dp)) {
-            Column(modifier = Modifier.padding(top = 24.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-                    Box(
-                        modifier = Modifier.size(60.dp).clip(RoundedCornerShape(14.dp)).background(PrimaryGold.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val initial = if (userName.isNotBlank()) userName.take(1).uppercase() else "U"
-                        Text(initial, color = PrimaryGold, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                    }
-                    // Verified Badge
-                    Row(
-                        modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(SuccessGreen.copy(alpha = 0.15f)).padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Verified, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(12.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("VERIFIED ID", color = SuccessGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
-                    }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(BgBlack)
+                .clickable { showProfileSheet = true }
+                .padding(top = 24.dp, bottom = 24.dp, start = 24.dp, end = 20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left: Clean Circular Avatar
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(PrimaryGold.copy(alpha = 0.15f))
+                        .border(1.dp, PrimaryGold.copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val initial = if (userName.isNotBlank()) userName.take(1).uppercase() else "U"
+                    Text(initial, color = PrimaryGold, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(userName, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text(businessType, color = PrimaryGold, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                Spacer(modifier = Modifier.height(6.dp))
-                val maskedAcc = if (accountNumber.length > 4) accountNumber.takeLast(4) else accountNumber
-                Text("Linked A/C: •••• $maskedAcc", color = SilverAccent, fontSize = 12.sp)
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // Middle: Stacked Details (Aligned perfectly to the avatar)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = userName,
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = businessType,
+                        color = PrimaryGold,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1
+                    ) }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Right: Navigation Chevron
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "Settings",
+                    tint = SilverAccent,
+                    modifier = Modifier.size(24.dp)
+                )
             }
         }
 
         // ==================================================
         // 2. ACTIONABLE MENU ITEMS
         // ==================================================
-        Column(modifier = Modifier.fillMaxSize().padding(top = 16.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(top = 8.dp)) {
 
-            Text("DATA & EXPORT", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+            Text("DATA & EXPORT", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
 
-            // Generate PDF Action
             ActionMenuItem(
                 icon = Icons.Default.PictureAsPdf,
                 title = "Export Trust Certificate",
@@ -102,7 +132,7 @@ fun CredenceDrawerSheet(
                 onClick = {
                     isGeneratingPdf = true
                     coroutineScope.launch {
-                        delay(1500) // Simulate PDF generation delay
+                        delay(1500)
                         isGeneratingPdf = false
                         Toast.makeText(context, "Certificate saved to Downloads folder", Toast.LENGTH_LONG).show()
                         onClose()
@@ -110,20 +140,18 @@ fun CredenceDrawerSheet(
                 }
             )
 
-            // Data Sync Action
             ActionMenuItem(
                 icon = Icons.Default.Sync,
                 title = "Update Bank Statement",
                 subtitle = "Sync latest month to boost score",
                 onClick = {
-                    Toast.makeText(context, "Please use the 'Wipe Data' option to start a fresh upload.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Tap your profile at the top to reset data and upload a new statement.", Toast.LENGTH_LONG).show()
                 }
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("CARD & PREFERENCES", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            Text("CARD & PREFERENCES", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
 
-            // Card Security Action
             ActionMenuItem(
                 icon = Icons.Default.CreditCardOff,
                 title = "Trust Card Security",
@@ -131,7 +159,6 @@ fun CredenceDrawerSheet(
                 onClick = { showCardSecurityDialog = true }
             )
 
-            // Language Switcher Action
             ActionMenuItem(
                 icon = Icons.Default.Language,
                 title = "App Language",
@@ -139,7 +166,6 @@ fun CredenceDrawerSheet(
                 onClick = { showLanguageDialog = true }
             )
 
-            // Support Action
             ActionMenuItem(
                 icon = Icons.Default.SupportAgent,
                 title = "WhatsApp Support",
@@ -153,122 +179,46 @@ fun CredenceDrawerSheet(
             Spacer(modifier = Modifier.weight(1f))
             HorizontalDivider(color = Color(0xFF27272A))
 
-            // Danger Zone
-            Box(
-                modifier = Modifier.clickable { onResetApp() }.fillMaxWidth().padding(24.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.DeleteForever, contentDescription = "Wipe Data", tint = DangerRed)
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text("Wipe Local Data", color = DangerRed, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Text("Delete statement & reset app", color = SilverAccent, fontSize = 11.sp)
-                    }
-                }
+            // App Version footer
+            Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                Text("Credence v1.2.0 (Build 84)", color = Color(0xFF3F3F46), fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
 
     // ==================================================
-    // INTERACTIVE DIALOGS
+    // 3. LAUNCH MODALS & DIALOGS
     // ==================================================
 
-    // 1. Language Selection Dialog
-    if (showLanguageDialog) {
-        var selectedLang by remember { mutableStateOf("English") }
-        AlertDialog(
-            onDismissRequest = { showLanguageDialog = false },
-            containerColor = CardDark,
-            title = { Text("Select Language", color = Color.White, fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    listOf("English", "हिन्दी (Hindi)", "मराठी (Marathi)", "தமிழ் (Tamil)").forEach { lang ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().clickable { selectedLang = lang }.padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = selectedLang == lang,
-                                onClick = { selectedLang = lang },
-                                colors = RadioButtonDefaults.colors(selectedColor = PrimaryGold, unselectedColor = SilverAccent)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(lang, color = if (selectedLang == lang) Color.White else SilverAccent, fontSize = 16.sp)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showLanguageDialog = false
-                        Toast.makeText(context, "Language set to $selectedLang", Toast.LENGTH_SHORT).show()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGold, contentColor = BgBlack)
-                ) { Text("Apply", fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLanguageDialog = false }) { Text("Cancel", color = SilverAccent) }
+    if (showProfileSheet) {
+        ProfileSettingsSheet(
+            userName = userName,
+            businessType = businessType,
+            onDismiss = { showProfileSheet = false },
+            onSignOutClick = { showWipeConfirmDialog = true }
+        )
+    }
+
+    if (showWipeConfirmDialog) {
+        WipeDataConfirmDialog(
+            onDismiss = { showWipeConfirmDialog = false },
+            onConfirm = {
+                onClose()
+                onResetApp()
             }
         )
     }
 
-    // 2. Card Security Dialog (Functional Toggles)
+    if (showLanguageDialog) {
+        LanguageDialog(onDismiss = { showLanguageDialog = false })
+    }
+
     if (showCardSecurityDialog) {
-        var isCardFrozen by remember { mutableStateOf(false) }
-        var isOnlineEnabled by remember { mutableStateOf(true) }
-
-        AlertDialog(
-            onDismissRequest = { showCardSecurityDialog = false },
-            containerColor = CardDark,
-            icon = { Icon(Icons.Default.Security, contentDescription = null, tint = InfoBlue, modifier = Modifier.size(32.dp)) },
-            title = { Text("Trust Card Security", color = Color.White, fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    Text("Manage restrictions for your NFC scheme disbursement card.", color = SilverAccent, fontSize = 13.sp, lineHeight = 18.sp)
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // Freeze Toggle
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Freeze Card", color = if (isCardFrozen) DangerRed else Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Text("Temporarily block all NFC and QR payments.", color = SilverAccent, fontSize = 12.sp)
-                        }
-                        Switch(
-                            checked = isCardFrozen,
-                            onCheckedChange = { isCardFrozen = it },
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = DangerRed, uncheckedThumbColor = SilverAccent, uncheckedTrackColor = Color(0xFF27272A))
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = Color(0xFF27272A))
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Online Payments Toggle
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Online Transactions", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Text("Allow card usage on verified vendor websites.", color = SilverAccent, fontSize = 12.sp)
-                        }
-                        Switch(
-                            checked = isOnlineEnabled,
-                            onCheckedChange = { isOnlineEnabled = it },
-                            colors = SwitchDefaults.colors(checkedThumbColor = BgBlack, checkedTrackColor = PrimaryGold, uncheckedThumbColor = SilverAccent, uncheckedTrackColor = Color(0xFF27272A))
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { showCardSecurityDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGold, contentColor = BgBlack)
-                ) { Text("Done", fontWeight = FontWeight.Bold) }
-            }
-        )
+        CardSecurityDialog(onDismiss = { showCardSecurityDialog = false })
     }
 }
 
-// ✨ Custom Menu Item component with Subtitles and Loading States
+// Reusable Action Menu Item Component
 @Composable
 fun ActionMenuItem(
     icon: ImageVector,
@@ -281,24 +231,27 @@ fun ActionMenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = !isLoading) { onClick() }
-            .padding(horizontal = 24.dp, vertical = 14.dp),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF27272A)),
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color(0xFF27272A)),
             contentAlignment = Alignment.Center
         ) {
             if (isLoading) {
-                CircularProgressIndicator(color = PrimaryGold, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                CircularProgressIndicator(color = PrimaryGold, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
             } else {
-                Icon(icon, contentDescription = title, tint = PrimaryGold, modifier = Modifier.size(20.dp))
+                Icon(icon, contentDescription = title, tint = PrimaryGold, modifier = Modifier.size(18.dp))
             }
         }
         Spacer(modifier = Modifier.width(16.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(2.dp))
-            Text(subtitle, color = SilverAccent, fontSize = 11.sp)
+            Text(subtitle, color = SilverAccent, fontSize = 12.sp)
         }
     }
 }

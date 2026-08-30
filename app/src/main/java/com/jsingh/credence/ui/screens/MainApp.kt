@@ -232,14 +232,7 @@ fun CredenceDashboard(
                     title = { Text("Credence", fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = Color.White) },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = BgBlack),
                     actions = {
-                        Row(
-                            modifier = Modifier.padding(end = 12.dp).clip(RoundedCornerShape(20.dp)).background(Color(0xFF27272A)).padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (portfolio != null) SuccessGreen else SilverAccent))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(if (portfolio != null) portfolio?.tier ?: "" else "No Profile", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                        }
+
                         // ✨ Notification Bell properly wired to showAlertsSheet
                         IconButton(onClick = { showAlertsSheet = true }, modifier = Modifier.padding(end = 8.dp)) {
                             BadgedBox(badge = { if (portfolio != null) { Badge(containerColor = DangerRed, modifier = Modifier.size(10.dp)) } }) {
