@@ -50,15 +50,23 @@ fun MyScoreTab(
     portfolio: TrustPortfolio?,
     userName: String,
     businessType: String,
-    onResetData: () -> Unit // Kept for interface compatibility, UI button removed
+    accountNumber: String,
+    onResetData: () -> Unit,
+    onUploadClick: () -> Unit
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+
+    // UI States
     var showCardSheet by remember { mutableStateOf(false) }
+    var showLinkedAccountsSheet by remember { mutableStateOf(false) }
 
     val credenceId = remember { "CRD-" + UUID.randomUUID().toString().take(8).uppercase() }
     val syncDate = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date()) }
 
+    // ==========================================
+    // POPUPS & SHEETS
+    // ==========================================
     if (showCardSheet) {
         TrustCardSheet(
             limit = portfolio?.safeLoanLimit ?: 0.0,
@@ -67,14 +75,28 @@ fun MyScoreTab(
         )
     }
 
+    if (showLinkedAccountsSheet && portfolio != null) {
+        LinkedAccountsSheet(
+            portfolio = portfolio,
+            accountNumber = accountNumber,
+            syncDate = syncDate,
+            onDismiss = { showLinkedAccountsSheet = false },
+            onUploadClick = {
+                showLinkedAccountsSheet = false
+                onUploadClick()
+            }
+        )
+    }
+
+    // ==========================================
+    // MAIN UI
+    // ==========================================
     LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         item {
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
-                    Text("Trust Profile", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                    Text("Your certified financial identity.", color = SilverAccent, fontSize = 14.sp)
-                }
+                    Text("Trust Profile", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                  }
                 Box(
                     modifier = Modifier.size(44.dp).clip(CircleShape).background(CardDark).border(1.dp, Color(0xFF27272A), CircleShape),
                     contentAlignment = Alignment.Center
@@ -82,15 +104,12 @@ fun MyScoreTab(
                     Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(20.dp))
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
         }
 
         if (portfolio == null) {
-            item { UploadPromptCard { } }
+            item { UploadPromptCard(onClick = onUploadClick) }
         } else {
-            // ==========================================
-            // ✨ 1. THE COOKED DIGITAL PASSPORT
-            // ==========================================
+            // 1. THE DIGITAL PASSPORT
             item {
                 Box(
                     modifier = Modifier
@@ -108,7 +127,6 @@ fun MyScoreTab(
                 ) {
                     Column(modifier = Modifier.padding(top = 20.dp, start = 20.dp, end = 20.dp, bottom = 16.dp)) {
 
-                        // Header Ribbon: Biometric & Status
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Fingerprint, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(14.dp))
@@ -124,7 +142,6 @@ fun MyScoreTab(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Core Identity
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
@@ -150,7 +167,6 @@ fun MyScoreTab(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Data Inset Ribbon (Looks highly structured)
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -165,9 +181,7 @@ fun MyScoreTab(
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text("${portfolio.bankName} (${portfolio.statementMonths}Mos)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                             }
-                            // Vertical Separator
                             Box(modifier = Modifier.height(24.dp).width(1.dp).background(Color(0xFF27272A)))
-
                             Column(horizontalAlignment = Alignment.End) {
                                 Text("LAST SYNCED", color = SilverAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                                 Spacer(modifier = Modifier.height(2.dp))
@@ -176,12 +190,38 @@ fun MyScoreTab(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // ==========================================
-            // 2. KEY METRICS GRID
-            // ==========================================
+            // 2. SLEEK ACCOUNT MANAGEMENT ROW
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(CardDark)
+                        .border(1.dp, Color(0xFF27272A), RoundedCornerShape(16.dp))
+                        .clickable { showLinkedAccountsSheet = true }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(SuccessGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.AccountBalance, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text("Manage Bank Accounts", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text("1 Linked • Active", color = SilverAccent, fontSize = 13.sp)
+                        }
+                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = SilverAccent)
+                }
+                Spacer(modifier = Modifier.height(18.dp))
+            }
+
+            // 3. KEY METRICS GRID
             item {
                 Text("Underwriting Summary", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(12.dp))
@@ -196,14 +236,12 @@ fun MyScoreTab(
                     val ratioColor = if (ratio >= 1.2) SuccessGreen else if (ratio >= 1.0) WarnAmber else DangerRed
 
                     MetricGridCard(modifier = Modifier.weight(1f), title = "Cashflow Ratio", value = String.format(Locale.US, "%.2fx", ratio), icon = Icons.Default.SwapVert, color = ratioColor)
-                    MetricGridCard(modifier = Modifier.weight(1f), title = "Data Depth", value = "${portfolio.statementMonths} Months", icon = Icons.Default.History, color = SilverAccent)
+                    MetricGridCard(modifier = Modifier.weight(1f), title = "Data Depth", value = "${portfolio.statementMonths} Mos", icon = Icons.Default.History, color = SilverAccent)
                 }
                 Spacer(modifier = Modifier.height(32.dp))
             }
 
-            // ==========================================
-            // 3. DEEP DIAGNOSTICS
-            // ==========================================
+            // 4. DEEP DIAGNOSTICS
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Diagnostic Risk Report", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
@@ -238,17 +276,14 @@ fun MyScoreTab(
                     description = "Daily operational activity. Proves the business is highly active and generating foot traffic.",
                     color = InfoBlue
                 )
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(18.dp))
             }
 
-            // ==========================================
-            // 4. THE EXPORT CENTER
-            // ==========================================
+            // 5. THE EXPORT CENTER
             item {
                 Text("Disbursement & Export", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Trust Card Entry
                 Row(
                     modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF27272A)).clickable { showCardSheet = true }.padding(20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -269,7 +304,6 @@ fun MyScoreTab(
                 }
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Official Report Generator
                 Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(CardDark).border(1.dp, PrimaryGold.copy(alpha = 0.3f), RoundedCornerShape(16.dp)).padding(20.dp)) {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -330,12 +364,10 @@ fun MyScoreTab(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // ==========================================
-            // 5. VERIFICATION LEDGER (Zero-Knowledge Trust)
-            // ==========================================
+            // 6. VERIFICATION LEDGER
             item {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.Security, contentDescription = null, tint = Color(0xFF3F3F46), modifier = Modifier.size(24.dp))
@@ -343,7 +375,106 @@ fun MyScoreTab(
                     Text("Credence Zero-Knowledge Engine v1.2", color = Color(0xFF3F3F46), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
                     Text("Data parsed locally. Never stored on external servers.", color = Color(0xFF3F3F46), fontSize = 10.sp)
                 }
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+// ✨ COOKED: The Perfectly Aligned Pop-Up Sheet for Bank Management
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LinkedAccountsSheet(
+    portfolio: TrustPortfolio,
+    accountNumber: String,
+    syncDate: String,
+    onDismiss: () -> Unit,
+    onUploadClick: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = CardDark) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 40.dp)) {
+            Text("Linked Financial Data", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Manage your connected bank accounts and statements.", color = SilverAccent, fontSize = 14.sp)
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Active Bank Card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(BgBlack)
+                    .border(1.dp, SuccessGreen.copy(alpha=0.3f), RoundedCornerShape(16.dp))
+                    .padding(20.dp)
+            ) {
+                Column {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(SuccessGreen.copy(alpha=0.15f)), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.AccountBalance, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text("Primary Account", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                val maskedAcc = if (accountNumber.length > 4) accountNumber.takeLast(4) else accountNumber
+                                Text("${portfolio.bankName} •••• $maskedAcc", color = SilverAccent, fontSize = 13.sp)
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(SuccessGreen.copy(alpha=0.15f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                            Text("ACTIVE", color = SuccessGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(color = Color(0xFF27272A))
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Perfectly aligned Action Row
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text("LAST SYNCED", color = SilverAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(syncDate, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(PrimaryGold.copy(alpha = 0.1f))
+                                .clickable { onUploadClick() }
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Sync, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Update", color = PrimaryGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Link Another Bank Account Button
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF27272A).copy(alpha=0.4f))
+                    .clickable { onUploadClick() }
+                    .border(1.dp, Color(0xFF3F3F46), RoundedCornerShape(16.dp))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.AddCircleOutline, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Link Another Bank Account", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }
@@ -403,7 +534,6 @@ fun TrustCardSheet(limit: Double, status: String, onDismiss: () -> Unit) {
             Text("Recent Auth Activity", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Sample mock activity
             val mockTxns = listOf(
                 Triple("Raju Cart & Equipment", 3200.0, true),
                 Triple("Sunrise Electronics", 1500.0, false),

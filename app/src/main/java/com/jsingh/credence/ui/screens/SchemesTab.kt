@@ -182,16 +182,14 @@ fun SchemesAndLendersTab(
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Capital Hub", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text("Discover schemes or manage your portfolio.", color = SilverAccent, fontSize = 14.sp)
+            Text("Capital Hub", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(20.dp))
 
             Row(modifier = Modifier.fillMaxWidth().background(CardDark, RoundedCornerShape(12.dp)).padding(4.dp)) {
                 SegmentTab("Discover", currentSection == 0, Modifier.weight(1f)) { currentSection = 0 }
                 SegmentTab("Track", currentSection == 1, Modifier.weight(1f)) { currentSection = 1 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             AnimatedVisibility(visible = currentSection == 1) {
                 Row(modifier = Modifier.fillMaxWidth().background(BgBlack, RoundedCornerShape(10.dp)).padding(3.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -357,7 +355,7 @@ fun SchemesAndLendersTab(
                 }
             }
         }
-        item { Spacer(modifier = Modifier.height(40.dp)) }
+        item { Spacer(modifier = Modifier.height(2.dp)) }
     }
 }
 

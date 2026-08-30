@@ -41,10 +41,8 @@ fun HomeTab(
         // 1. PERSONALIZED HEADER
         // ==========================================
         item {
-            Spacer(modifier = Modifier.height(8.dp))
             val firstName = userName.split(" ").firstOrNull() ?: "there"
-            Text("Welcome back, $firstName", color = SilverAccent, fontSize = 14.sp, letterSpacing = 1.sp)
-            Text("Trust Dashboard", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+           Text("Trust Dashboard", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
 
         // ==========================================
@@ -61,7 +59,7 @@ fun HomeTab(
 
                     ScoreCoachingStrip(portfolio.tier)
 
-                    Spacer(modifier = Modifier.height(28.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
                     QuickActionsRow(onNavigateToLoans, onUploadClick)
                 }
@@ -98,7 +96,7 @@ fun HomeTab(
                     Text("New Listing for You", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     Text("Market", color = PrimaryGold, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clickable { onNavigateToLoans() })
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 val topOffer = listings.firstOrNull()
                 topOffer?.let {
@@ -121,7 +119,7 @@ fun HomeTab(
                 DataFreshnessStrip(portfolio = portfolio, onUpdateClick = onUploadClick)
             }
         }
-        item { Spacer(modifier = Modifier.height(40.dp)) }
+        item { Spacer(modifier = Modifier.height(2.dp)) }
     }
 }
 
@@ -192,7 +190,7 @@ fun QuickActionButton(label: String, icon: ImageVector, onClick: () -> Unit) {
         ) {
             Icon(icon, contentDescription = label, tint = PrimaryGold, modifier = Modifier.size(22.dp))
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         Text(label, color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Medium)
     }
 }

@@ -26,6 +26,7 @@ private val DangerRed = Color(0xFFEF4444)
 fun ProfileSettingsSheet(
     userName: String,
     businessType: String,
+    accountNumber: String,
     onDismiss: () -> Unit,
     onSignOutClick: () -> Unit
 ) {
@@ -36,24 +37,43 @@ fun ProfileSettingsSheet(
             Text("Account Settings", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Account Info Readout
-            Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BgBlack).border(1.dp, Color(0xFF27272A), RoundedCornerShape(12.dp)).padding(16.dp)) {
+            Text("PERSONAL DETAILS", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(BgBlack)
+                    .border(1.dp, Color(0xFF27272A), RoundedCornerShape(16.dp))
+                    .padding(16.dp)
+            ) {
                 Column {
                     Text("ACCOUNT OWNER", color = SilverAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(userName, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     Text("BUSINESS TYPE", color = SilverAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(businessType, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text("LINKED ACCOUNT", color = SilverAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    val maskedAcc = if (accountNumber.length > 4) accountNumber.takeLast(4) else accountNumber
+                    Text("•••• $maskedAcc", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Sign Out / Wipe Button
             Button(
                 onClick = {
-                    onDismiss() // Close sheet first
-                    onSignOutClick() // Then trigger the dialog
+                    onDismiss()
+                    onSignOutClick()
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = DangerRed.copy(alpha = 0.15f), contentColor = DangerRed),

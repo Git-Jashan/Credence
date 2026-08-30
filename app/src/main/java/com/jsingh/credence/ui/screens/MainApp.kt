@@ -217,7 +217,18 @@ fun CredenceDashboard(
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            CredenceDrawerSheet(userName, businessType, accountNumber, onClose = { scope.launch { drawerState.close() } }, onResetApp = onResetApp)
+            CredenceDrawerSheet(
+                portfolio = portfolio, // ✨ THIS WAS THE MISSING PIECE!
+                userName = userName,
+                businessType = businessType,
+                accountNumber = accountNumber,
+                onClose = { scope.launch { drawerState.close() } },
+                onResetApp = onResetApp,
+                onUploadClick = {
+                    scope.launch { drawerState.close() }
+                    showBankSelector = true
+                }
+            )
         }
     ) {
         Scaffold(
@@ -254,8 +265,14 @@ fun CredenceDashboard(
                 when (selectedTab) {
                     0 -> HomeTab(portfolio, userName, onUploadClick = { showBankSelector = true }, onNavigateToLoans = { selectedTab = 1 })
                     1 -> SchemesAndLendersTab(portfolio, onUploadClick = { showBankSelector = true }, onNavigateToCard = { selectedTab = 2 })
-                    2 -> MyScoreTab(portfolio, userName, businessType, onResetData = onResetApp)
-                }
+                    2 -> MyScoreTab(
+                        portfolio = portfolio,
+                        userName = userName,
+                        businessType = businessType,
+                        accountNumber = accountNumber, // ✨ Passes the account down
+                        onResetData = onResetApp,
+                        onUploadClick = { showBankSelector = true } // ✨ Triggers the Bank Selector!
+                    )}
             }
         }
     }

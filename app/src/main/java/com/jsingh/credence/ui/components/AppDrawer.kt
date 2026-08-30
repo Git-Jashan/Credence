@@ -22,12 +22,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-// Import the separated Modals and Dialogs
+// Import your existing models and Dialogs/Sheets
+import com.jsingh.credence.domain.models.TrustPortfolio
 import com.jsingh.credence.ui.dialogs.CardSecurityDialog
 import com.jsingh.credence.ui.dialogs.LanguageDialog
 import com.jsingh.credence.ui.dialogs.WipeDataConfirmDialog
 import com.jsingh.credence.ui.sheets.ProfileSettingsSheet
+
+// ✨ IMPORT THE EXISTING SHEET FROM MY SCORE TAB
+import com.jsingh.credence.ui.screens.LinkedAccountsSheet
 
 // 100% Local Colors
 private val BgBlack = Color(0xFF09090B)
@@ -37,39 +44,42 @@ private val SilverAccent = Color(0xFFA1A1AA)
 
 @Composable
 fun CredenceDrawerSheet(
+    portfolio: TrustPortfolio?, // ✨ NEW: We need this to feed your LinkedAccountsSheet
     userName: String,
     businessType: String,
     accountNumber: String,
     onClose: () -> Unit,
-    onResetApp: () -> Unit
+    onResetApp: () -> Unit,
+    onUploadClick: () -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // Elegant State Hoisting
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showCardSecurityDialog by remember { mutableStateOf(false) }
     var isGeneratingPdf by remember { mutableStateOf(false) }
     var showProfileSheet by remember { mutableStateOf(false) }
     var showWipeConfirmDialog by remember { mutableStateOf(false) }
 
+    // ✨ State to show your existing LinkedAccountsSheet
+    var showLinkedAccountsSheet by remember { mutableStateOf(false) }
+
     ModalDrawerSheet(drawerContainerColor = CardDark, modifier = Modifier.width(320.dp)) {
 
         // ==================================================
-        // 1. ✨ FULL-WIDTH DARK HEADER (Perfectly Aligned)
+        // 1. FULL-WIDTH DARK HEADER
         // ==================================================
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(BgBlack)
                 .clickable { showProfileSheet = true }
-                .padding(top = 24.dp, bottom = 24.dp, start = 24.dp, end = 20.dp)
+                .padding(top = 48.dp, bottom = 24.dp, start = 24.dp, end = 20.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left: Clean Circular Avatar
                 Box(
                     modifier = Modifier
                         .size(56.dp)
@@ -84,50 +94,44 @@ fun CredenceDrawerSheet(
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                // Middle: Stacked Details (Aligned perfectly to the avatar)
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text(
-                        text = userName,
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1
-                    )
+                    Text(text = userName, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = businessType,
-                        color = PrimaryGold,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1
-                    ) }
+                    Text(text = businessType, color = PrimaryGold, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Right: Navigation Chevron
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = "Settings",
-                    tint = SilverAccent,
-                    modifier = Modifier.size(24.dp)
-                )
+                Icon(Icons.Default.ChevronRight, contentDescription = "Settings", tint = SilverAccent, modifier = Modifier.size(24.dp))
             }
         }
 
         // ==================================================
-        // 2. ACTIONABLE MENU ITEMS
+        // 2. MINIMAL ACTION ITEMS
         // ==================================================
         Column(modifier = Modifier.fillMaxSize().padding(top = 8.dp)) {
 
-            Text("DATA & EXPORT", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
+            // ✨ OPENS YOUR EXISTING ACCOUNTS SHEET!
+            ActionMenuItem(
+                icon = Icons.Default.AccountBalance,
+                title = "Manage & Update Accounts",
+                onClick = {
+                    if (portfolio != null) {
+                        showLinkedAccountsSheet = true
+                    } else {
+                        // If no portfolio exists, just go straight to upload
+                        onClose()
+                        onUploadClick()
+                    }
+                }
+            )
 
             ActionMenuItem(
                 icon = Icons.Default.PictureAsPdf,
                 title = "Export Trust Certificate",
-                subtitle = "Download PDF for offline agents",
                 isLoading = isGeneratingPdf,
                 onClick = {
                     isGeneratingPdf = true
@@ -140,36 +144,25 @@ fun CredenceDrawerSheet(
                 }
             )
 
-            ActionMenuItem(
-                icon = Icons.Default.Sync,
-                title = "Update Bank Statement",
-                subtitle = "Sync latest month to boost score",
-                onClick = {
-                    Toast.makeText(context, "Tap your profile at the top to reset data and upload a new statement.", Toast.LENGTH_LONG).show()
-                }
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Text("CARD & PREFERENCES", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = Color(0xFF27272A), modifier = Modifier.padding(horizontal = 24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             ActionMenuItem(
                 icon = Icons.Default.CreditCardOff,
                 title = "Trust Card Security",
-                subtitle = "Freeze card or view limits",
                 onClick = { showCardSecurityDialog = true }
             )
 
             ActionMenuItem(
                 icon = Icons.Default.Language,
                 title = "App Language",
-                subtitle = "English (Change to हिन्दी, etc.)",
                 onClick = { showLanguageDialog = true }
             )
 
             ActionMenuItem(
                 icon = Icons.Default.SupportAgent,
                 title = "WhatsApp Support",
-                subtitle = "Connect with a loan advisor",
                 onClick = {
                     Toast.makeText(context, "Opening WhatsApp...", Toast.LENGTH_SHORT).show()
                     onClose()
@@ -177,11 +170,9 @@ fun CredenceDrawerSheet(
             )
 
             Spacer(modifier = Modifier.weight(1f))
-            HorizontalDivider(color = Color(0xFF27272A))
 
-            // App Version footer
             Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                Text("Credence v1.2.0 (Build 84)", color = Color(0xFF3F3F46), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("Credence v1.2.0", color = Color(0xFF3F3F46), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -190,10 +181,27 @@ fun CredenceDrawerSheet(
     // 3. LAUNCH MODALS & DIALOGS
     // ==================================================
 
+    // ✨ REUSES THE EXACT SHEET FROM MYSCORETAB.KT
+    if (showLinkedAccountsSheet && portfolio != null) {
+        val syncDate = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date()) }
+        LinkedAccountsSheet(
+            portfolio = portfolio,
+            accountNumber = accountNumber,
+            syncDate = syncDate,
+            onDismiss = { showLinkedAccountsSheet = false },
+            onUploadClick = {
+                showLinkedAccountsSheet = false
+                onClose()
+                onUploadClick()
+            }
+        )
+    }
+
     if (showProfileSheet) {
         ProfileSettingsSheet(
             userName = userName,
             businessType = businessType,
+            accountNumber = accountNumber,
             onDismiss = { showProfileSheet = false },
             onSignOutClick = { showWipeConfirmDialog = true }
         )
@@ -218,12 +226,11 @@ fun CredenceDrawerSheet(
     }
 }
 
-// Reusable Action Menu Item Component
+// ✨ ULTRA-MINIMAL ACTION MENU ITEM
 @Composable
 fun ActionMenuItem(
     icon: ImageVector,
     title: String,
-    subtitle: String,
     isLoading: Boolean = false,
     onClick: () -> Unit
 ) {
@@ -231,27 +238,23 @@ fun ActionMenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = !isLoading) { onClick() }
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 24.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(38.dp)
+                .size(36.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(Color(0xFF27272A)),
             contentAlignment = Alignment.Center
         ) {
             if (isLoading) {
-                CircularProgressIndicator(color = PrimaryGold, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                CircularProgressIndicator(color = PrimaryGold, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
             } else {
                 Icon(icon, contentDescription = title, tint = PrimaryGold, modifier = Modifier.size(18.dp))
             }
         }
         Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(subtitle, color = SilverAccent, fontSize = 12.sp)
-        }
+        Text(title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
     }
 }
