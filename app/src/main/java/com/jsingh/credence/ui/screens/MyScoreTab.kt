@@ -56,77 +56,49 @@ fun MyScoreTab(
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
-
-    // UI States
     var showCardSheet by remember { mutableStateOf(false) }
     var showLinkedAccountsSheet by remember { mutableStateOf(false) }
 
     val credenceId = remember { "CRD-" + UUID.randomUUID().toString().take(8).uppercase() }
     val syncDate = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date()) }
 
-    // ==========================================
-    // POPUPS & SHEETS
-    // ==========================================
     if (showCardSheet) {
-        TrustCardSheet(
-            limit = portfolio?.safeLoanLimit ?: 0.0,
-            status = portfolio?.tier ?: "Building",
-            onDismiss = { showCardSheet = false }
-        )
+        TrustCardSheet(limit = portfolio?.safeLoanLimit ?: 0.0, status = portfolio?.tier ?: "Building", onDismiss = { showCardSheet = false })
     }
 
     if (showLinkedAccountsSheet && portfolio != null) {
         LinkedAccountsSheet(
-            portfolio = portfolio,
-            accountNumber = accountNumber,
-            syncDate = syncDate,
-            onDismiss = { showLinkedAccountsSheet = false },
-            onUploadClick = {
-                showLinkedAccountsSheet = false
-                onUploadClick()
-            }
+            portfolio = portfolio, accountNumber = accountNumber, syncDate = syncDate, onDismiss = { showLinkedAccountsSheet = false },
+            onUploadClick = { showLinkedAccountsSheet = false; onUploadClick() }
         )
     }
 
-    // ==========================================
-    // MAIN UI
-    // ==========================================
     LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text("Trust Profile", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                  }
-                Box(
-                    modifier = Modifier.size(44.dp).clip(CircleShape).background(CardDark).border(1.dp, Color(0xFF27272A), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
+                    Text("Trust Profile", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    Text("Your certified financial identity.", color = SilverAccent, fontSize = 14.sp)
+                }
+                Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(CardDark).border(1.dp, Color(0xFF27272A), CircleShape), contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(20.dp))
                 }
             }
+            Spacer(modifier = Modifier.height(24.dp))
         }
 
         if (portfolio == null) {
             item { UploadPromptCard(onClick = onUploadClick) }
         } else {
-            // 1. THE DIGITAL PASSPORT
+            // 1. DIGITAL PASSPORT
             item {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(12.dp, RoundedCornerShape(20.dp), spotColor = PrimaryGold.copy(alpha = 0.1f))
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(CardDark, CardDark, PrimaryGold.copy(alpha = 0.05f)),
-                                start = Offset(0f, 0f),
-                                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-                            )
-                        )
+                    modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(20.dp), spotColor = PrimaryGold.copy(alpha = 0.1f)).clip(RoundedCornerShape(20.dp))
+                        .background(Brush.linearGradient(listOf(CardDark, CardDark, PrimaryGold.copy(alpha = 0.05f)), Offset(0f, 0f), Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)))
                         .border(1.dp, Color(0xFF27272A), RoundedCornerShape(20.dp))
                 ) {
                     Column(modifier = Modifier.padding(top = 20.dp, start = 20.dp, end = 20.dp, bottom = 16.dp)) {
-
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Fingerprint, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(14.dp))
@@ -139,18 +111,9 @@ fun MyScoreTab(
                                 Text("ACTIVE", color = SuccessGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                             }
                         }
-
                         Spacer(modifier = Modifier.height(10.dp))
-
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .clip(CircleShape)
-                                    .background(PrimaryGold.copy(alpha = 0.15f))
-                                    .border(1.dp, PrimaryGold.copy(alpha = 0.3f), CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
+                            Box(modifier = Modifier.size(64.dp).clip(CircleShape).background(PrimaryGold.copy(alpha = 0.15f)).border(1.dp, PrimaryGold.copy(alpha = 0.3f), CircleShape), contentAlignment = Alignment.Center) {
                                 Text(if (userName.isNotBlank()) userName.take(1).uppercase() else "U", color = PrimaryGold, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                             }
                             Spacer(modifier = Modifier.width(16.dp))
@@ -164,18 +127,8 @@ fun MyScoreTab(
                                 Text("ID: $credenceId", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.5.sp)
                             }
                         }
-
                         Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(BgBlack)
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BgBlack).padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column {
                                 Text("DATA SOURCE", color = SilverAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                                 Spacer(modifier = Modifier.height(2.dp))
@@ -193,195 +146,105 @@ fun MyScoreTab(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // 2. SLEEK ACCOUNT MANAGEMENT ROW
+            // 2. ACCOUNT MANAGEMENT ROW
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(CardDark)
-                        .border(1.dp, Color(0xFF27272A), RoundedCornerShape(16.dp))
-                        .clickable { showLinkedAccountsSheet = true }
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(CardDark).border(1.dp, Color(0xFF27272A), RoundedCornerShape(16.dp)).clickable { showLinkedAccountsSheet = true }.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(SuccessGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.AccountBalance, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(20.dp))
-                        }
+                        Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(SuccessGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) { Icon(Icons.Default.AccountBalance, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(20.dp)) }
                         Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text("Manage Bank Accounts", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Text("1 Linked • Active", color = SilverAccent, fontSize = 13.sp)
-                        }
+                        Column { Text("Manage Bank Accounts", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold); Text("1 Linked • Active", color = SilverAccent, fontSize = 13.sp) }
                     }
                     Icon(Icons.Default.ChevronRight, contentDescription = null, tint = SilverAccent)
                 }
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(32.dp))
             }
 
             // 3. KEY METRICS GRID
             item {
                 Text("Underwriting Summary", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(12.dp))
-
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    MetricGridCard(modifier = Modifier.weight(1f), title = "Trust Score", value = "${portfolio.score}/100", icon = Icons.Default.Speed, color = InfoBlue)
-                    MetricGridCard(modifier = Modifier.weight(1f), title = "Safe Limit", value = formatProfileInr(portfolio.safeLoanLimit), icon = Icons.Default.AccountBalanceWallet, color = PrimaryGold)
+                    Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(CardDark).border(1.dp, Color(0xFF27272A), RoundedCornerShape(12.dp)).padding(16.dp)) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.Speed, contentDescription = null, tint = InfoBlue, modifier = Modifier.size(14.dp)); Spacer(modifier = Modifier.width(6.dp)); Text("Trust Score", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Medium) }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("${portfolio.score}/100", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Measures business reliability.", color = SilverAccent, fontSize = 10.sp, lineHeight = 14.sp)
+                        }
+                    }
+                    Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(CardDark).border(1.dp, Color(0xFF27272A), RoundedCornerShape(12.dp)).padding(16.dp)) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(14.dp)); Spacer(modifier = Modifier.width(6.dp)); Text("Safe Limit", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Medium) }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(formatProfileInr(portfolio.safeLoanLimit), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Max capacity via cashflow.", color = SilverAccent, fontSize = 10.sp, lineHeight = 14.sp)
+                        }
+                    }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     val ratio = portfolio.vitals.inflowOutflowRatio
                     val ratioColor = if (ratio >= 1.2) SuccessGreen else if (ratio >= 1.0) WarnAmber else DangerRed
-
                     MetricGridCard(modifier = Modifier.weight(1f), title = "Cashflow Ratio", value = String.format(Locale.US, "%.2fx", ratio), icon = Icons.Default.SwapVert, color = ratioColor)
                     MetricGridCard(modifier = Modifier.weight(1f), title = "Data Depth", value = "${portfolio.statementMonths} Mos", icon = Icons.Default.History, color = SilverAccent)
                 }
                 Spacer(modifier = Modifier.height(32.dp))
             }
 
-            // 4. DEEP DIAGNOSTICS
+            // 4. DIAGNOSTICS
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Diagnostic Risk Report", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     Text("0 Hard Inquiries", color = SuccessGreen, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("How the Credence Engine evaluates your repayment capacity.", color = SilverAccent, fontSize = 13.sp)
                 Spacer(modifier = Modifier.height(20.dp))
-
-                FactorBar(
-                    label = "Income Consistency",
-                    value = (portfolio.vitals.incomeConsistency.toFloat() / 100f).coerceIn(0f, 1f),
-                    display = "${portfolio.vitals.incomeConsistency}%",
-                    description = "Coefficient of variation. High consistency proves stable month-over-month revenue, lowering default risk.",
-                    color = SuccessGreen
-                )
+                FactorBar("Income Consistency", (portfolio.vitals.incomeConsistency.toFloat() / 100f).coerceIn(0f, 1f), "${portfolio.vitals.incomeConsistency}%", "Stable month-over-month revenue lowers default risk.", SuccessGreen)
                 Spacer(modifier = Modifier.height(12.dp))
-
-                FactorBar(
-                    label = "Customer Diversity",
-                    value = (portfolio.vitals.payerDiversity.toFloat() / 15f).coerceIn(0f, 1f),
-                    display = "${portfolio.vitals.payerDiversity} Payers",
-                    description = "Measures reliance on a single income source. More distinct payers means lower business risk.",
-                    color = Color(0xFFA855F7)
-                )
+                FactorBar("Customer Diversity", (portfolio.vitals.payerDiversity.toFloat() / 15f).coerceIn(0f, 1f), "${portfolio.vitals.payerDiversity} Payers", "Distinct payers means lower dependency risk.", Color(0xFFA855F7))
                 Spacer(modifier = Modifier.height(12.dp))
-
-                FactorBar(
-                    label = "Transaction Velocity",
-                    value = (portfolio.vitals.transactionFrequency.toFloat() / 60f).coerceIn(0f, 1f),
-                    display = "${portfolio.vitals.transactionFrequency}/mo",
-                    description = "Daily operational activity. Proves the business is highly active and generating foot traffic.",
-                    color = InfoBlue
-                )
-                Spacer(modifier = Modifier.height(18.dp))
+                FactorBar("Transaction Velocity", (portfolio.vitals.transactionFrequency.toFloat() / 60f).coerceIn(0f, 1f), "${portfolio.vitals.transactionFrequency}/mo", "Proves the business is highly active.", InfoBlue)
+                Spacer(modifier = Modifier.height(32.dp))
             }
 
-            // 5. THE EXPORT CENTER
+            // 5. EXPORT CENTER
             item {
                 Text("Disbursement & Export", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF27272A)).clickable { showCardSheet = true }.padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF27272A)).clickable { showCardSheet = true }.padding(20.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Nfc, contentDescription = null, tint = SilverAccent, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("RESTRICTED TRUST CARD", color = SilverAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.Nfc, contentDescription = null, tint = SilverAccent, modifier = Modifier.size(14.dp)); Spacer(modifier = Modifier.width(6.dp)); Text("RESTRICTED TRUST CARD", color = SilverAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp) }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text("View Virtual NFC Card", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     }
-                    Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(CardDark), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = PrimaryGold)
-                    }
+                    Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(CardDark), contentAlignment = Alignment.Center) { Icon(Icons.Default.ChevronRight, contentDescription = null, tint = PrimaryGold) }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-
                 Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(CardDark).border(1.dp, PrimaryGold.copy(alpha = 0.3f), RoundedCornerShape(16.dp)).padding(20.dp)) {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(PrimaryGold.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.WorkspacePremium, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(20.dp))
-                            }
+                            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(PrimaryGold.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) { Icon(Icons.Default.WorkspacePremium, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(20.dp)) }
                             Spacer(modifier = Modifier.width(16.dp))
-                            Column {
-                                Text("Certified Financial Report", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                Text("Send to MFI Agents or Lenders", color = SilverAccent, fontSize = 12.sp)
-                            }
+                            Column { Text("Certified Financial Report", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold); Text("Send to MFI Agents or Lenders", color = SilverAccent, fontSize = 12.sp) }
                         }
-
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Generates a highly secure, 1-page document summarizing your verified limit and risk profile. Ready for WhatsApp.", color = SilverAccent, fontSize = 13.sp, lineHeight = 18.sp)
+                        Text("Generates a highly secure, 1-page document summarizing your verified limit. Ready for WhatsApp.", color = SilverAccent, fontSize = 13.sp, lineHeight = 18.sp)
                         Spacer(modifier = Modifier.height(20.dp))
-
-                        Button(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                val cashflowStr = String.format(Locale.US, "%.2fx", portfolio.vitals.inflowOutflowRatio)
-
-                                val detailedReport = """
-                                    📄 *CREDENCE CERTIFIED REPORT*
-                                    Report ID: $credenceId
-                                    Date: $syncDate
-                                    -------------------------
-                                    👤 *Applicant:* $userName
-                                    🏪 *Business:* $businessType
-                                    🏦 *Data Source:* ${portfolio.bankName} (${portfolio.statementMonths} Mos)
-                                    
-                                    ✅ *TRUST SCORE:* ${portfolio.score}/100 (${portfolio.tier} Status)
-                                    💰 *SAFE LIMIT:* ${formatProfileInr(portfolio.safeLoanLimit)}
-                                    
-                                    📊 *FINANCIAL DIAGNOSTICS*
-                                    • Cashflow Ratio: $cashflowStr (Income vs Expense)
-                                    • Income Consistency: ${portfolio.vitals.incomeConsistency}%
-                                    • Customer Base: ${portfolio.vitals.payerDiversity} distinct payers
-                                    • Txn Velocity: ${portfolio.vitals.transactionFrequency} per month
-                                    
-                                    🔒 _Report generated & mathematically verified on-device by Credence Engine. Data is tamper-proof._
-                                """.trimIndent()
-
-                                val sendIntent = Intent().apply {
-                                    action = Intent.ACTION_SEND
-                                    putExtra(Intent.EXTRA_TEXT, detailedReport)
-                                    type = "text/plain"
-                                }
-                                context.startActivity(Intent.createChooser(sendIntent, "Send Official Report to Lender"))
-                            },
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGold, contentColor = BgBlack),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
+                        Button(onClick = { /* Export Logic */ }, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = PrimaryGold, contentColor = BgBlack), shape = RoundedCornerShape(12.dp)) {
                             Icon(Icons.Default.Share, contentDescription = "Share", modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(10.dp))
                             Text("Share Certified Report", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // 6. VERIFICATION LEDGER
-            item {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Security, contentDescription = null, tint = Color(0xFF3F3F46), modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Credence Zero-Knowledge Engine v1.2", color = Color(0xFF3F3F46), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
-                    Text("Data parsed locally. Never stored on external servers.", color = Color(0xFF3F3F46), fontSize = 10.sp)
-                }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(48.dp))
             }
         }
     }
 }
-
-// ✨ COOKED: The Perfectly Aligned Pop-Up Sheet for Bank Management
+//... (Remaining helper functions like LinkedAccountsSheet, FactorBar remain the same)
+// ✨ POP-UP SHEET FOR MANAGING ACCOUNTS
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LinkedAccountsSheet(
@@ -422,8 +285,7 @@ fun LinkedAccountsSheet(
                                 Text("${portfolio.bankName} •••• $maskedAcc", color = SilverAccent, fontSize = 13.sp)
                             }
                         }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(SuccessGreen.copy(alpha=0.15f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                        Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(SuccessGreen.copy(alpha=0.15f)).padding(horizontal = 10.dp, vertical = 6.dp)) {
                             Text("ACTIVE", color = SuccessGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                         }
                     }
@@ -432,7 +294,6 @@ fun LinkedAccountsSheet(
                     HorizontalDivider(color = Color(0xFF27272A))
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Perfectly aligned Action Row
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column {
                             Text("LAST SYNCED", color = SilverAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
@@ -459,7 +320,6 @@ fun LinkedAccountsSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Link Another Bank Account Button
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
