@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import com.jsingh.credence.utils.SessionManager
+import java.text.DecimalFormat
 
 // ==========================================
 // 1. GLOBAL COLORS & UTILS
@@ -45,8 +46,11 @@ val DangerRed = Color(0xFFEF4444)
 val InfoBlue = Color(0xFF3B82F6)
 val WarnAmber = Color(0xFFF59E0B)
 
-fun formatInr(value: Double): String = "\u20B9${value.roundToInt()}"
-
+// ✨ GUARANTEED INDIAN COMMA FORMATTER (Lakhs & Crores)
+fun formatInr(value: Double): String {
+    val formatter = DecimalFormat("##,##,##0")
+    return "₹${formatter.format(value.roundToInt())}"
+}
 // ==========================================
 // 2. MAIN APP ROUTER
 // ==========================================

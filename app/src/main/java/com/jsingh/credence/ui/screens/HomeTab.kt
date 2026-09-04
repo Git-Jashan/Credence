@@ -174,10 +174,6 @@ fun QuickActionButton(label: String, icon: ImageVector, onClick: () -> Unit) {
     }
 }
 
-// ==========================================
-// ✨ ISOLATED LOCAL COMPONENTS
-// ==========================================
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CreditSimulatorWidget(dynamicScore: Int, requestedAmount: Double, maxLimit: Float, sliderValue: Float, onSliderChange: (Float) -> Unit) {
@@ -196,7 +192,10 @@ private fun CreditSimulatorWidget(dynamicScore: Int, requestedAmount: Double, ma
                 Column {
                     Text("LOAN ANALYSER", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Spacer(modifier = Modifier.height(4.dp))
+
+                    // ✨ Commas applied automatically here!
                     Text(formatInr(requestedAmount), color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Black, letterSpacing = (-1.5).sp)
+
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(tierColor))
@@ -221,12 +220,13 @@ private fun CreditSimulatorWidget(dynamicScore: Int, requestedAmount: Double, ma
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("₹1,000", color = SilverAccent, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+
+                // ✨ Commas applied automatically here!
                 Text("Limit: ${formatInr(maxLimit.toDouble())}", color = SilverAccent, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
         }
     }
 }
-
 @Composable
 private fun PortfolioSnapshotCard(onClick: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(CardDark).clickable { onClick() }.padding(20.dp)) {
@@ -297,10 +297,10 @@ private fun HomeLoanOfferCard(title: String, amount: String, rate: String, badge
             Text(badge, color = if (isHighlighted) PrimaryGold else SilverAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             Spacer(modifier = Modifier.height(6.dp))
             Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-                Column { Text("Approved Limit", color = SilverAccent, fontSize = 12.sp); Text(amount, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold) }
-                Text(rate, color = SuccessGreen, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Column { Text("Approved Limit", color = SilverAccent, fontSize = 12.sp); Text(amount, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold) }
+                Text(rate, color = SuccessGreen, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(20.dp))
             Button(onClick = onApply, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = if (isHighlighted) PrimaryGold else Color.White, contentColor = BgBlack), shape = RoundedCornerShape(12.dp)) { Text(ctaLabel, fontWeight = FontWeight.Bold, fontSize = 16.sp) }

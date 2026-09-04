@@ -44,7 +44,6 @@ import java.util.UUID
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
-
 private fun formatProfileInr(value: Double): String {
     val formatter = NumberFormat.getNumberInstance(Locale("en", "IN"))
     return "\u20B9${formatter.format(value.roundToInt())}"
@@ -91,6 +90,7 @@ fun MyScoreTab(
         )
     }
 
+    // Kept your exact 16.dp spacing and layout padding!
     LazyColumn(modifier = Modifier.fillMaxSize().background(BgBlack).padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -150,7 +150,7 @@ fun MyScoreTab(
                             Column(verticalArrangement = Arrangement.Center) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(userName, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp)
-                                   }
+                                }
                                 Text(businessType, color = PrimaryGold, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
 
                                 Text("ID: $credenceId", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.5.sp)
@@ -197,44 +197,52 @@ fun MyScoreTab(
                 }
             }
 
-            // 3. KEY METRICS GRID (Now includes DTI instead of Data Depth)
+            // ✨ 3. UPGRADED KEY METRICS GRID (Now exposes hidden EMI and Tier data via subtitles)
             item {
                 Text("Underwriting Summary", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(CardDark).padding(16.dp)) {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Speed, contentDescription = null, tint = InfoBlue, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Trust Score", color = SilverAccent, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("${portfolio.score}/100", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(CardDark).padding(16.dp)) {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Safe Limit", color = SilverAccent, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(formatProfileInr(portfolio.safeLoanLimit), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
+                    MetricGridCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Trust Score",
+                        value = "${portfolio.score}/100",
+                        subtitle = "Tier: ${portfolio.tier.uppercase()}", // Exposes Tier
+                        icon = Icons.Default.Speed,
+                        color = InfoBlue
+                    )
+                    MetricGridCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Safe Limit",
+                        value = formatProfileInr(portfolio.safeLoanLimit),
+                        subtitle = "${portfolio.statementMonths} Mos Data", // Exposes data depth
+                        icon = Icons.Default.AccountBalanceWallet,
+                        color = PrimaryGold
+                    )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     val ratio = portfolio.vitals.inflowOutflowRatio
                     val ratioColor = if (ratio >= 1.2) SuccessGreen else if (ratio >= 1.0) WarnAmber else DangerRed
-                    MetricGridCard(modifier = Modifier.weight(1f), title = "Cashflow Ratio", value = String.format(Locale.US, "%.2fx", ratio), icon = Icons.Default.SwapVert, color = ratioColor)
+                    MetricGridCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Cashflow",
+                        value = String.format(Locale.US, "%.2fx", ratio),
+                        subtitle = "Inflow vs Outflow",
+                        icon = Icons.Default.SwapVert,
+                        color = ratioColor
+                    )
 
-                    // ✨ NEW: Debt to Income shown here!
+                    // Debt Burden explicitly exposing the calculated Estimated EMI
                     val dti = portfolio.vitals.debtToIncomeRatio
                     val dtiColor = if (dti < 0.3) SuccessGreen else if (dti < 0.5) WarnAmber else DangerRed
-                    MetricGridCard(modifier = Modifier.weight(1f), title = "Debt Burden", value = "${(dti * 100).roundToInt()}%", icon = Icons.Default.TrendingDown, color = dtiColor)
+                    MetricGridCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Debt Burden",
+                        value = "${(dti * 100).roundToInt()}%",
+                        subtitle = "Est. EMI: ${formatProfileInr(portfolio.vitals.estimatedEMI)}", // Exposes Hidden Calculation!
+                        icon = Icons.Default.TrendingDown,
+                        color = dtiColor
+                    )
                 }
             }
 
@@ -242,30 +250,30 @@ fun MyScoreTab(
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Risk Diagnostics", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text("${portfolio.vitals.longevityMonths} Mos Analyzed", color = SuccessGreen, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Text("Powered by Credence AI", color = PrimaryGold, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 
                 val consistencyProgress = (portfolio.vitals.incomeConsistency.toFloat() / 100f).coerceIn(0f, 1f)
-                FactorBar("Income Consistency", consistencyProgress, "${portfolio.vitals.incomeConsistency}%", "Stable month-over-month revenue lowers default risk.", SuccessGreen)
+                FactorBar("Income Consistency", consistencyProgress, "${portfolio.vitals.incomeConsistency}%", "Low monthly volatility confirms predictable cashflow for lenders.", SuccessGreen)
                 Spacer(modifier = Modifier.height(12.dp))
 
                 val diversityProgress = (portfolio.vitals.payerDiversity.toFloat() / 15f).coerceIn(0f, 1f)
-                FactorBar("Customer Diversity", diversityProgress, "${portfolio.vitals.payerDiversity} Payers", "Distinct payers means lower dependency risk.", Color(0xFFA855F7))
+                FactorBar("Customer Diversity", diversityProgress, "${portfolio.vitals.payerDiversity} Payers", "Distinct payer handles reduces single-client dependency risk.", Color(0xFFA855F7))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 val velocityProgress = (portfolio.vitals.transactionFrequency.toFloat() / 60f).coerceIn(0f, 1f)
-                FactorBar("Transaction Velocity", velocityProgress, "${portfolio.vitals.transactionFrequency}/mo", "Proves the business is highly active.", InfoBlue)
+                FactorBar("Transaction Velocity", velocityProgress, "${portfolio.vitals.transactionFrequency}/mo", "High monthly transaction volume proves the business is actively trading.", InfoBlue)
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // ✨ NEW: Repayment Integrity Bar mapped to Bounce Count!
+                // Repayment Integrity Bar exactly mapped to Bounce Count!
                 val bounceCount = portfolio.vitals.bounceCount
                 val integrityProgress = if (bounceCount == 0) 1f else (1f - (bounceCount * 0.33f)).coerceIn(0f, 1f)
                 FactorBar(
                     label = "Repayment Integrity",
                     value = integrityProgress,
                     display = if (bounceCount == 0) "Zero Bounces" else "$bounceCount Penalties",
-                    description = if (bounceCount == 0) "Zero ECS/NACH defaults or bank penalty charges detected." else "Penalties detected on statement; heavily affects score.",
+                    description = if (bounceCount == 0) "Zero ECS/NACH defaults or bank penalty charges detected." else "Penalties detected on statement; heavily affects risk score.",
                     color = if (bounceCount == 0) SuccessGreen else DangerRed
                 )
             }
@@ -297,7 +305,7 @@ fun MyScoreTab(
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.Security, contentDescription = null, tint = Color(0xFF3F3F46), modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Credence Zero-Knowledge Engine v1.2", color = Color(0xFF3F3F46), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+                    Text("Credence Zero-Knowledge Engine v2.0", color = Color(0xFF3F3F46), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
                     Text("Data parsed locally. Never stored on external servers.", color = Color(0xFF3F3F46), fontSize = 10.sp)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -381,8 +389,9 @@ fun DigitalIdQrSheet(userName: String, credenceId: String, portfolio: TrustPortf
     }
 }
 
+// ✨ UPGRADED: Added a subtitle parameter so we can expose the hidden engine calculations
 @Composable
-fun MetricGridCard(modifier: Modifier = Modifier, title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color) {
+fun MetricGridCard(modifier: Modifier = Modifier, title: String, value: String, subtitle: String? = null, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color) {
     Box(modifier = modifier.clip(RoundedCornerShape(16.dp)).background(CardDark).padding(16.dp)) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -390,6 +399,10 @@ fun MetricGridCard(modifier: Modifier = Modifier, title: String, value: String, 
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(value, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            if (subtitle != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(subtitle, color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            }
         }
     }
 }

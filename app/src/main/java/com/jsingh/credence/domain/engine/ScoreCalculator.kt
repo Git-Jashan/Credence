@@ -7,6 +7,8 @@ import java.time.Instant
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -15,30 +17,30 @@ object ScoreCalculator {
     private val PERIOD_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM yyyy")
     private val ZONE: ZoneId = ZoneId.systemDefault()
 
-    // Rebalanced for actual lender priorities
-    private const val W_LIQUIDITY_BUFFER = 0.30   // Tier 1: Do they have cash on hand?
-    private const val W_DEBT_BURDEN = 0.25        // Tier 1: Are they already overloaded?
-    private const val W_INCOME_CONSISTENCY = 0.20 // Tier 2: Is income reliable?
-    private const val W_PAYER_DIVERSITY = 0.15    // Tier 2: Risk of single-point failure
-    private const val W_TXN_FREQUENCY = 0.10      // Tier 3: General activity
+    // Professional Lending Weights
+    private const val W_TURNOVER_VOLUME = 0.25      // Scale of cash passing through
+    private const val W_CASHFLOW_HEALTH = 0.25      // Inflow vs Outflow balance
+    private const val W_INCOME_CONSISTENCY = 0.20   // Low volatility across months
+    private const val W_PAYER_DIVERSITY = 0.15      // Customer/source spread
+    private const val W_DEBT_DISCIPLINE = 0.15      // Verified EMI capacity
 
-    private data class MonthAgg(val income: Double, val expense: Double) {
-        val net: Double get() = income - expense
-    }
+    private data class MonthAgg(val income: Double, val expense: Double)
 
     fun calculateScore(transactions: List<Transaction>, bankName: String = "Verified Bank"): TrustPortfolio {
-        // Fallback for empty statements
         if (transactions.isEmpty()) {
-            return TrustPortfolio(score = 0, tier = "Building", safeLoanLimit = 0.0, vitals = Vitals(0, 0, 0.0, 0, 0), bankName = bankName)
+            return TrustPortfolio(
+                score = 0, tier = "Building", safeLoanLimit = 0.0, bankName = bankName,
+                vitals = Vitals(incomeConsistency = 0, transactionFrequency = 0, inflowOutflowRatio = 0.0, longevityMonths = 0, payerDiversity = 0)
+            )
         }
 
         val earliestMs = transactions.minOf { it.timestamp }
         val latestMs = transactions.maxOf { it.timestamp }
         val spanDays = ((latestMs - earliestMs) / (1000L * 60 * 60 * 24)).toInt().coerceAtLeast(1)
-        val spanMonths = (spanDays / 30.0).roundToInt().coerceAtLeast(1)
+        val spanMonths = max(1, (spanDays / 30.0).roundToInt())
         val periodLabel = buildPeriodLabel(earliestMs, latestMs, spanMonths)
 
-        // 1. Basic Aggregation
+        // 1. Monthly Aggregation
         val monthly: Map<YearMonth, MonthAgg> = transactions
             .groupBy { Instant.ofEpochMilli(it.timestamp).atZone(ZONE).toLocalDate().let { d -> YearMonth.of(d.year, d.month) } }
             .mapValues { (_, txns) ->
@@ -54,80 +56,141 @@ object ScoreCalculator {
         val avgMonthlyIncome = if (spanMonths > 0) totalIncome / spanMonths else totalIncome
         val avgMonthlyExpense = if (spanMonths > 0) totalExpense / spanMonths else totalExpense
 
-        // 2. TIER 1: Debt Obligation Detection (EMIs)
-        // Look for exact matching expense amounts > 500 across multiple months
-        val expenses = transactions.filter { it.isExpense && it.category != "Penalties & Fees" }
-        val estimatedMonthlyEMI = expenses.groupBy { it.amount }
-            .filter { (amount, txns) ->
-                amount > 500.0 && txns.distinctBy { Instant.ofEpochMilli(it.timestamp).atZone(ZONE).month }.size > 1
+        // =========================================================================
+        // 1. CASHFLOW HEALTH (Normalized to real-world accounts)
+        // =========================================================================
+        // In real business accounts, Inflow ~= Outflow. A ratio of 0.95 to 1.1x is standard and healthy.
+        val inflowOutflowRatio = if (totalExpense > 0) totalIncome / totalExpense else if (totalIncome > 0) 1.5 else 1.0
+        val cashflowScore = when {
+            inflowOutflowRatio >= 1.20 -> 100
+            inflowOutflowRatio >= 1.00 -> 85
+            inflowOutflowRatio >= 0.90 -> 70
+            inflowOutflowRatio >= 0.75 -> 50
+            else -> 30
+        }
+
+        // =========================================================================
+        // 2. TURNOVER VOLUME & REVENUE STRENGTH
+        // =========================================================================
+        // Businesses with healthy throughput score high on baseline capacity
+        val turnoverScore = when {
+            avgMonthlyIncome >= 150000 -> 100
+            avgMonthlyIncome >= 80000  -> 85
+            avgMonthlyIncome >= 40000  -> 75
+            avgMonthlyIncome >= 20000  -> 65
+            avgMonthlyIncome > 0       -> 50
+            else                       -> 20
+        }
+
+        // =========================================================================
+        // 3. TRUE EMI IDENTIFICATION (Eliminates "Ghost EMIs")
+        // =========================================================================
+        // Checks specifically for loan / financing indicators in transaction text
+        val loanKeywords = listOf("nach", "ach", "ecs", "loan", "emi", "bajaj", "finance", "capital", "cholamandalam", "hdb", "idfc", "muthoot")
+        val verifiedLoanTxns = transactions.filter { txn ->
+            txn.isExpense && loanKeywords.any { kw ->
+                txn.merchantName.lowercase().contains(kw) || txn.title.lowercase().contains(kw)
             }
+        }
+
+        // Recurring exact amounts with loan keywords
+        val estimatedMonthlyEMI = verifiedLoanTxns.groupBy { it.amount }
+            .filter { (_, txns) -> txns.size >= 2 }
             .keys.sum()
 
-        // Calculate Debt Burden Score (Lower score if EMI consumes > 40% of income)
-        val debtToIncomeRatio = if (avgMonthlyIncome > 0) estimatedMonthlyEMI / avgMonthlyIncome else 1.0
-        val debtBurdenScore = (100 * (1.0 - (debtToIncomeRatio / 0.4).coerceAtMost(1.0))).roundToInt()
+        val debtToIncomeRatio = if (avgMonthlyIncome > 0) estimatedMonthlyEMI / avgMonthlyIncome else 0.0
+        val debtScore = when {
+            debtToIncomeRatio == 0.0 -> 95  // Clean slate, minimal existing debt
+            debtToIncomeRatio <= 0.25 -> 85 // Safe leverage
+            debtToIncomeRatio <= 0.40 -> 65 // Moderate leverage
+            else -> 40                      // Over-leveraged
+        }
 
-        // 3. TIER 1: Liquidity Buffer (Average/Min Balance)
-        // NOTE: Requires 'balance' field in Transaction model
-        val validBalances = transactions.mapNotNull { it.balance }.filter { it > 0 }
-        val avgBalance = if (validBalances.isNotEmpty()) validBalances.average() else 0.0
-        val liquidityBufferScore = if (avgMonthlyExpense > 0) {
-            // Good score if average balance covers at least 1 month of expenses
-            (100 * (avgBalance / avgMonthlyExpense).coerceAtMost(1.0)).roundToInt()
-        } else 50
-
-        // 4. TIER 1: Bounces and Penalties (Hard Defaults)
-        val bounceCount = transactions.count { it.category == "Penalties & Fees" }
-        val penaltyDeduction = (bounceCount * 15).coerceAtMost(45) // Harsher penalty for real underwriting
-
-        // 5. TIER 2: Income Consistency (Strict Math)
+        // =========================================================================
+        // 4. INCOME CONSISTENCY (Volatility)
+        // =========================================================================
         val incomeConsistencyScore: Int = if (activeMonths.size < 2) {
-            if (totalIncome > 0) 50 else 0 // Less forgiving for new businesses
+            if (totalIncome > 0) 75 else 30
         } else {
             val incomes = activeMonths.map { it.income }
             val mean = incomes.average()
-            if (mean <= 0.0) 0 else {
+            if (mean <= 0.0) 30 else {
                 val variance = incomes.sumOf { (it - mean) * (it - mean) } / incomes.size
                 val stdDev = sqrt(variance)
-                // Removed the artificial 0.5 cap - punishes high volatility accurately
-                (100 * (1.0 - (stdDev / mean).coerceAtMost(1.0))).roundToInt()
+                // CV (Coefficient of Variation): stdDev / mean. CV < 0.35 is very stable.
+                val cv = stdDev / mean
+                when {
+                    cv <= 0.25 -> 95
+                    cv <= 0.45 -> 80
+                    cv <= 0.70 -> 65
+                    else -> 45
+                }
             }
         }
 
-        // 6. TIER 3: Breadth and Activity
+        // =========================================================================
+        // 5. TRANSACTION ACTIVITY & DIVERSITY
+        // =========================================================================
         val txnsPerMonth = (transactions.size.toDouble() / spanMonths).roundToInt()
-        val txnFrequencyScore = ((txnsPerMonth / 30.0) * 100).roundToInt().coerceIn(0, 100)
-
         val payerDiversity = transactions.filter { !it.isExpense }.distinctBy { it.merchantName }.size
-        val payerDiversityScore = ((payerDiversity / 5.0) * 100).roundToInt().coerceIn(0, 100)
+        val diversityScore = when {
+            payerDiversity >= 12 -> 100
+            payerDiversity >= 6  -> 85
+            payerDiversity >= 3  -> 70
+            payerDiversity >= 1  -> 55
+            else                 -> 35
+        }
 
-        // 7. Final Score Calculation
-        val weightedFraction =
-            (liquidityBufferScore * W_LIQUIDITY_BUFFER +
-                    debtBurdenScore * W_DEBT_BURDEN +
-                    incomeConsistencyScore * W_INCOME_CONSISTENCY +
-                    payerDiversityScore * W_PAYER_DIVERSITY +
-                    txnFrequencyScore * W_TXN_FREQUENCY) / 100.0
+        // =========================================================================
+        // 6. PENALTY DEDUCTIONS (Bounces & Return Charges)
+        // =========================================================================
+        val bounceCount = transactions.count { it.category == "Penalties & Fees" }
+        val penaltyDeduction = (bounceCount * 12).coerceAtMost(36)
 
-        val baseScore = ((weightedFraction * 100) - penaltyDeduction).roundToInt().coerceIn(0, 100)
+        // =========================================================================
+        // FINAL SCORE ASSEMBLY
+        // =========================================================================
+        val weightedTotal = (
+                turnoverScore * W_TURNOVER_VOLUME +
+                        cashflowScore * W_CASHFLOW_HEALTH +
+                        incomeConsistencyScore * W_INCOME_CONSISTENCY +
+                        diversityScore * W_PAYER_DIVERSITY +
+                        debtScore * W_DEBT_DISCIPLINE
+                )
 
-        // Map to actual UI Tiers
+        val finalScore = (weightedTotal - penaltyDeduction).roundToInt().coerceIn(30, 95)
+
         val tier = when {
-            baseScore >= 75 -> "Gold"
-            baseScore >= 50 -> "Silver"
+            finalScore >= 75 -> "Gold"
+            finalScore >= 55 -> "Silver"
             else -> "Building"
         }
 
-        // Realistic Safe Loan Limit (FOIR Method: Income - Living Expenses - Existing EMI)
-        val disposableIncome = (avgMonthlyIncome - avgMonthlyExpense - estimatedMonthlyEMI).coerceAtLeast(0.0)
-        val safeLoanLimit = disposableIncome * 3.0 // Can afford this EMI for 3 months safely
+        // =========================================================================
+        // REALISTIC SAFE LOAN LIMIT (Banking Turnover Standard)
+        // =========================================================================
+        // Baseline: 2.0x Monthly Inflow.
+        // Adjusted down if existing EMIs are high, adjusted up for clean records.
+        val baseCapacity = avgMonthlyIncome * 2.0
+        val remainingCapacity = max(0.0, baseCapacity - (estimatedMonthlyEMI * 12.0))
+        val safeLoanLimit = max(15000.0, (remainingCapacity * (finalScore / 100.0))).roundToInt().toDouble()
+
+        val finalVitals = Vitals(
+            incomeConsistency = incomeConsistencyScore,
+            transactionFrequency = txnsPerMonth,
+            inflowOutflowRatio = inflowOutflowRatio,
+            longevityMonths = spanMonths,
+            payerDiversity = payerDiversity,
+            debtToIncomeRatio = debtToIncomeRatio,
+            bounceCount = bounceCount,
+            estimatedEMI = estimatedMonthlyEMI
+        )
 
         return TrustPortfolio(
-            score = baseScore,
+            score = finalScore,
             tier = tier,
-            safeLoanLimit = safeLoanLimit.roundToInt().toDouble(),
-            // Ensure you add bounceCount and estimatedEMI to your Vitals data class!
-            vitals = Vitals(incomeConsistencyScore, txnsPerMonth, debtToIncomeRatio, spanMonths, payerDiversity),
+            safeLoanLimit = safeLoanLimit,
+            vitals = finalVitals,
             recentTransactions = transactions.take(5),
             bankName = bankName,
             statementPeriodLabel = periodLabel,
