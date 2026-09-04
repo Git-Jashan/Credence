@@ -12,5 +12,6 @@ data class Transaction(
     val transactionType: String, // e.g., "BANK", "UPI"
     val account: String,
     val source: String,          // e.g., "STATEMENT"
-    val phoneNumber: String? = null
+    val phoneNumber: String? = null,
+    val balance: Double? = null
 )

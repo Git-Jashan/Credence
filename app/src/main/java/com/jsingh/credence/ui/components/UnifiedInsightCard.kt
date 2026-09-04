@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -24,15 +23,14 @@ import com.jsingh.credence.ui.theme.SilverAccent
 import com.jsingh.credence.ui.theme.SuccessGreen
 
 /**
- * Was referenced from the old MainApp.kt's HomeTab() ("Verification Engine" section)
- * but never actually defined anywhere in the codebase — a dangling reference in the
- * original file, not something this reorg broke. Built here for real, using the
- * Vitals fields already on TrustPortfolio so the "proof" section shows the actual
- * factors behind the score, not a placeholder.
+ * Visualizes the raw Vitals driving the Trust Score.
+ * Upgraded to reflect true Tier-1 signals (Debt, Bounces) and correctly format
+ * raw counts (like transaction volume and payer diversity) into accurate progress bars.
  */
 @Composable
 fun UnifiedInsightsCard(portfolio: TrustPortfolio) {
     val v = portfolio.vitals
+    val dangerRed = Color(0xFFEF4444)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -40,36 +38,69 @@ fun UnifiedInsightsCard(portfolio: TrustPortfolio) {
         shape = RoundedCornerShape(20.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
+
+            // --- TIER 2 & 3 SIGNALS (Health & Activity) ---
             InsightRow(
                 label = "Income Consistency",
-                value = "${v.incomeConsistency}/100",
+                value = "${v.incomeConsistency}%",
                 progress = v.incomeConsistency / 100f
             )
             Spacer(modifier = Modifier.height(14.dp))
             InsightRow(
-                label = "Transaction Frequency",
-                value = "${v.transactionFrequency}/100",
-                progress = v.transactionFrequency / 100f
+                label = "Transaction Volume",
+                value = "${v.transactionFrequency} / mo",
+                // Engine considers ~30 txns/month as max score
+                progress = (v.transactionFrequency / 30f).coerceIn(0f, 1f)
             )
             Spacer(modifier = Modifier.height(14.dp))
             InsightRow(
-                label = "Payer Diversity",
-                value = "${v.payerDiversity}/100",
-                progress = v.payerDiversity / 100f
+                label = "Income Sources",
+                value = "${v.payerDiversity} unique",
+                // Engine considers ~5 distinct payers as max diversity score
+                progress = (v.payerDiversity / 5f).coerceIn(0f, 1f)
             )
             Spacer(modifier = Modifier.height(14.dp))
             InsightRow(
-                label = "Longevity",
+                label = "Statement History",
                 value = "${v.longevityMonths} months",
-                progress = (v.longevityMonths / 24f).coerceIn(0f, 1f) // 24 months treated as a strong baseline
+                // 24 months treated as a strong baseline for progress max
+                progress = (v.longevityMonths / 24f).coerceIn(0f, 1f)
             )
-            Spacer(modifier = Modifier.height(14.dp))
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // --- TIER 1 SIGNALS (Risk & Debt) ---
             Row(modifier = Modifier.fillMaxWidth()) {
-                Text("Inflow / Outflow Ratio", color = SilverAccent, fontSize = 13.sp)
+                Text("Debt-to-Income (FOIR)", color = SilverAccent, fontSize = 13.sp)
+                Spacer(modifier = Modifier.weight(1f))
+
+                val dtiPercent = (v.debtToIncomeRatio * 100).toInt()
+                Text(
+                    text = if (v.debtToIncomeRatio >= 1.0) ">100%" else "$dtiPercent%",
+                    // Anything over 40% DTI is considered risky in traditional lending
+                    color = if (v.debtToIncomeRatio > 0.40) dangerRed else SuccessGreen,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text("Existing EMIs Found", color = SilverAccent, fontSize = 13.sp)
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = String.format("%.2fx", v.inflowOutflowRatio),
-                    color = if (v.inflowOutflowRatio >= 1.0) SuccessGreen else Color(0xFFEF4444),
+                    text = if (v.estimatedEMI > 0) "₹${v.estimatedEMI.toInt()} / mo" else "None",
+                    color = if (v.estimatedEMI > 0) PrimaryGold else Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text("Bounces & Penalties", color = SilverAccent, fontSize = 13.sp)
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = if (v.bounceCount > 0) "${v.bounceCount} detected" else "0 (Clean)",
+                    color = if (v.bounceCount > 0) dangerRed else SuccessGreen,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 )

@@ -41,10 +41,8 @@ import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.roundToInt
 
-
-
 private enum class CatalogFilter(val label: String) { ALL("All"), SCHEMES("Schemes"), LENDERS("Lenders") }
-private enum class TrackerSubTab(val label: String) { ACTIVE("Active Loans"), APPLICATIONS("Applications") }
+enum class TrackerSubTab(val label: String) { ACTIVE("Active Loans"), APPLICATIONS("Applications") }
 private enum class SortOption(val label: String) { RECOMMENDED("Recommended"), HIGHEST_AMOUNT("Highest Amount"), LOWEST_RATE("Lowest Rate") }
 
 private fun formatTabInr(value: Double): String {
@@ -56,31 +54,38 @@ private fun formatTabInr(value: Double): String {
 @Composable
 fun SchemesAndLendersTab(
     portfolio: TrustPortfolio?,
+    defaultTab: Int = 0,
+    defaultSubTab: Int = 0,
     onUploadClick: () -> Unit,
     onNavigateToCard: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    var currentSection by remember { mutableIntStateOf(0) }
-    var trackerSubTab by remember { mutableStateOf(TrackerSubTab.ACTIVE) }
+
+    var currentSection by remember(defaultTab) { mutableIntStateOf(defaultTab) }
+    var trackerSubTab by remember(defaultSubTab) {
+        mutableStateOf(if (defaultSubTab == 1) TrackerSubTab.APPLICATIONS else TrackerSubTab.ACTIVE)
+    }
 
     var query by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf(CatalogFilter.ALL) }
     var sortOption by remember { mutableStateOf(SortOption.RECOMMENDED) }
+
+    // ✨ RESTORED FILTER VARIABLES
     var preApprovedOnly by remember { mutableStateOf(false) }
     var zeroCollateralOnly by remember { mutableStateOf(false) }
+    val hasActiveFilters = sortOption != SortOption.RECOMMENDED || preApprovedOnly || zeroCollateralOnly
 
     var showFilterSheet by remember { mutableStateOf(false) }
     var showCustomLoanSheet by remember { mutableStateOf(false) }
 
-    val hasActiveFilters = sortOption != SortOption.RECOMMENDED || preApprovedOnly || zeroCollateralOnly
-    val applicationStage = remember { mutableStateMapOf<String, SchemeStage>() }
-    val listings = remember(portfolio) { if (portfolio != null) LoanCatalog.build(portfolio) else emptyList() }
+    val applicationStage = remember { mutableStateMapOf<String, LocalSchemeStage>() }
+    val listings = remember(portfolio) { if (portfolio != null) LocalLoanCatalog.build(portfolio) else emptyList() }
 
     val filtered = remember(listings, query, filter, sortOption, preApprovedOnly, zeroCollateralOnly) {
         var base = listings.filter {
             (filter == CatalogFilter.ALL ||
-                    (filter == CatalogFilter.SCHEMES && it.category == ListingCategory.SCHEME) ||
-                    (filter == CatalogFilter.LENDERS && it.category == ListingCategory.LENDER)) &&
+                    (filter == CatalogFilter.SCHEMES && it.category == LocalListingCategory.SCHEME) ||
+                    (filter == CatalogFilter.LENDERS && it.category == LocalListingCategory.LENDER)) &&
                     it.title.contains(query, ignoreCase = true)
         }
 
@@ -117,7 +122,7 @@ fun SchemesAndLendersTab(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text("SORT BY", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 Spacer(modifier = Modifier.height(8.dp))
@@ -134,7 +139,7 @@ fun SchemesAndLendersTab(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text("SMART FILTERS", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -162,7 +167,7 @@ fun SchemesAndLendersTab(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = { showFilterSheet = false },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -175,11 +180,10 @@ fun SchemesAndLendersTab(
         }
     }
 
-    LazyColumn(modifier = Modifier.fillMaxSize().background(BgBlack).padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+    LazyColumn(modifier = Modifier.fillMaxSize().background(BgBlack).padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
-            Spacer(modifier = Modifier.height(16.dp))
             Text("Capital Market", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp)
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Row(modifier = Modifier.fillMaxWidth().background(CardDark, RoundedCornerShape(16.dp)).padding(4.dp)) {
                 SegmentTab("Discover", currentSection == 0, Modifier.weight(1f)) { currentSection = 0 }
@@ -188,7 +192,17 @@ fun SchemesAndLendersTab(
         }
 
         if (portfolio == null) {
-            item { UploadPromptCard(onUploadClick) }
+            item {
+                Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(CardDark).border(1.dp, Color(0xFF27272A), RoundedCornerShape(16.dp)).clickable { onUploadClick() }.padding(24.dp), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.CloudUpload, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(48.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Upload Bank Statement", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Link your account to view eligible capital.", color = SilverAccent, fontSize = 14.sp)
+                    }
+                }
+            }
             return@LazyColumn
         }
 
@@ -198,20 +212,24 @@ fun SchemesAndLendersTab(
                     OutlinedTextField(
                         value = query, onValueChange = { query = it }, placeholder = { Text("Search lenders...", color = SilverAccent) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = SilverAccent) }, singleLine = true,
-                        modifier = Modifier.weight(1f).height(50.dp), shape = CircleShape,
+                        modifier = Modifier.weight(1f).height(54.dp), shape = CircleShape,
                         colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = CardDark, unfocusedContainerColor = CardDark, focusedBorderColor = PrimaryGold, unfocusedBorderColor = Color.Transparent, focusedTextColor = Color.White, unfocusedTextColor = Color.White)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Box(
+                    Row(
                         modifier = Modifier
-                            .size(50.dp)
-                            .shadow(6.dp, CircleShape, spotColor = PrimaryGold.copy(alpha=0.3f))
+                            .height(54.dp)
+                            .shadow(8.dp, CircleShape, spotColor = PrimaryGold.copy(alpha=0.3f))
                             .clip(CircleShape)
                             .background(PrimaryGold)
-                            .clickable { showCustomLoanSheet = true },
-                        contentAlignment = Alignment.Center
+                            .clickable { showCustomLoanSheet = true }
+                            .padding(horizontal = 20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(Icons.Default.Campaign, contentDescription = "Custom Loan", tint = BgBlack, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.Campaign, contentDescription = "Custom Loan", tint = BgBlack, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Custom", color = BgBlack, fontSize = 14.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
@@ -245,27 +263,27 @@ fun SchemesAndLendersTab(
                     }
                 }
             } else {
-                val schemes = filtered.filter { it.category == ListingCategory.SCHEME }
-                val lenders = filtered.filter { it.category == ListingCategory.LENDER }
+                val schemes = filtered.filter { it.category == LocalListingCategory.SCHEME }
+                val lenders = filtered.filter { it.category == LocalListingCategory.LENDER }
 
                 if (schemes.isNotEmpty()) {
-                    item { Text("Government Schemes", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
+                    item { Text("Government Schemes", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp)) }
                     items(schemes, key = { it.id }) { listing ->
-                        val stage = applicationStage[listing.id] ?: if (listing.id == "pm-svanidhi") SchemeStage.DISBURSED else SchemeStage.NOT_APPLIED
-                        SchemeCard(listing = listing, stage = stage, portfolio = portfolio, onApply = { applicationStage[listing.id] = SchemeStage.APPLIED; Toast.makeText(context, "Scheme application started.", Toast.LENGTH_SHORT).show() }, onOpenCard = onNavigateToCard)
+                        val stage = applicationStage[listing.id] ?: if (listing.id == "pm-svanidhi") LocalSchemeStage.DISBURSED else LocalSchemeStage.NOT_APPLIED
+                        SchemeCard(listing = listing, stage = stage, portfolio = portfolio, onApply = { applicationStage[listing.id] = LocalSchemeStage.APPLIED; Toast.makeText(context, "Scheme application started.", Toast.LENGTH_SHORT).show() }, onOpenCard = onNavigateToCard)
                     }
                 }
                 if (lenders.isNotEmpty()) {
-                    item { Text("Private Lenders", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
+                    item { Text("Private Lenders", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp)) }
                     items(lenders, key = { it.id }) { listing ->
-                        val stage = applicationStage[listing.id] ?: SchemeStage.NOT_APPLIED
-                        val pending = stage != SchemeStage.NOT_APPLIED
-                        // ✨ RENAMED TO MarketLoanCard!
-                        MarketLoanCard(title = listing.title, amount = formatTabInr(listing.amount), rate = listing.rateLabel, badge = listing.badge, ctaLabel = if (pending) "Application Sent" else "Apply Now", onApply = { if (!pending) { applicationStage[listing.id] = SchemeStage.APPLIED; Toast.makeText(context, "Application submitted.", Toast.LENGTH_SHORT).show() } })
+                        val stage = applicationStage[listing.id] ?: LocalSchemeStage.NOT_APPLIED
+                        val pending = stage != LocalSchemeStage.NOT_APPLIED
+                        MarketLoanCard(title = listing.title, amount = formatTabInr(listing.amount), rate = listing.rateLabel, badge = listing.badge, ctaLabel = if (pending) "Application Sent" else "Apply Now", onApply = { if (!pending) { applicationStage[listing.id] = LocalSchemeStage.APPLIED; Toast.makeText(context, "Application submitted.", Toast.LENGTH_SHORT).show() } })
                     }
                 }
             }
         } else {
+            // TRACK SECTION
             item {
                 Row(modifier = Modifier.fillMaxWidth().background(CardDark, RoundedCornerShape(12.dp)).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     TrackerSubTab.entries.forEach { subTab ->
@@ -280,10 +298,13 @@ fun SchemesAndLendersTab(
                 item { PendingApplicationTrackerCard(title = "Micro-Business Working Capital", lender = "MFI Partner", appId = "APP-90211", appliedDate = "28 Aug 2026", stage = 2, onActionClick = { Toast.makeText(context, "Opening KYC Upload Portal...", Toast.LENGTH_SHORT).show() }) }
             }
         }
-        item { Spacer(modifier = Modifier.height(24.dp)) }
+        item { Spacer(modifier = Modifier.height(12.dp)) }
     }
 }
 
+// =====================================
+// ✨ CUSTOM LOAN REQUEST POPUP
+// =====================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomLoanRequestSheet(portfolio: TrustPortfolio, onDismiss: () -> Unit) {
@@ -323,6 +344,7 @@ fun CustomLoanRequestSheet(portfolio: TrustPortfolio, onDismiss: () -> Unit) {
             Text("Negotiate terms directly with our lender network.", color = SilverAccent, fontSize = 14.sp)
             Spacer(modifier = Modifier.height(32.dp))
 
+            // DYNAMIC SCORE HUD
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -359,8 +381,8 @@ fun CustomLoanRequestSheet(portfolio: TrustPortfolio, onDismiss: () -> Unit) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // AMOUNT INPUT
             Text("LOAN AMOUNT", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
-
             OutlinedTextField(
                 value = amountInput,
                 onValueChange = { if (it.all { char -> char.isDigit() } && it.length < 9) amountInput = it },
@@ -377,6 +399,7 @@ fun CustomLoanRequestSheet(portfolio: TrustPortfolio, onDismiss: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // QUICK CHIPS
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 QuickAmountChip("₹10,000") { amountInput = "10000" }
                 QuickAmountChip("₹50,000") { amountInput = "50000" }
@@ -385,18 +408,13 @@ fun CustomLoanRequestSheet(portfolio: TrustPortfolio, onDismiss: () -> Unit) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // INTEREST RATE
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
                 Text("Target Interest Rate", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 Text("${targetInterest.roundToInt()}%", color = PrimaryGold, fontSize = 20.sp, fontWeight = FontWeight.Black)
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Slider(
-                value = targetInterest,
-                onValueChange = { targetInterest = it },
-                valueRange = 8f..36f,
-                modifier = Modifier.height(20.dp),
-                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = PrimaryGold, inactiveTrackColor = Color(0xFF27272A))
-            )
+            Slider(value = targetInterest, onValueChange = { targetInterest = it }, valueRange = 8f..36f, modifier = Modifier.height(20.dp), colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = PrimaryGold, inactiveTrackColor = Color(0xFF27272A)))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("8% (Harder)", color = SilverAccent, fontSize = 11.sp)
                 Text("36% (Easier)", color = SilverAccent, fontSize = 11.sp)
@@ -434,6 +452,10 @@ fun CustomLoanRequestSheet(portfolio: TrustPortfolio, onDismiss: () -> Unit) {
     }
 }
 
+// =====================================
+// FULLY ISOLATED MOCK CLASSES
+// =====================================
+
 @Composable
 fun RowScope.QuickAmountChip(label: String, onClick: () -> Unit) {
     Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(CardDark).clickable { onClick() }.padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
@@ -448,27 +470,23 @@ private fun SegmentTab(text: String, isSelected: Boolean, modifier: Modifier, on
     }
 }
 
-// =====================================
-// ✨ SHARED COMPONENTS
-// =====================================
-
 @Composable
-fun SchemeCard(listing: LoanListing, stage: SchemeStage, portfolio: TrustPortfolio, onApply: () -> Unit, onOpenCard: () -> Unit) {
+fun SchemeCard(listing: LocalLoanListing, stage: LocalSchemeStage, portfolio: TrustPortfolio, onApply: () -> Unit, onOpenCard: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val isPreApproved = listing.amount <= portfolio.safeLoanLimit
     val (statusLabel, statusColor) = when (stage) {
-        SchemeStage.NOT_APPLIED -> if (isPreApproved) "Pre-Approved" to SuccessGreen else "Checking Match" to WarnAmber
-        SchemeStage.APPLIED, SchemeStage.UNDER_VERIFICATION -> "Pending" to WarnAmber
-        SchemeStage.APPROVED -> "Approved" to PrimaryGold
-        SchemeStage.DISBURSED -> "Funds Ready" to InfoBlue
+        LocalSchemeStage.NOT_APPLIED -> if (isPreApproved) "Pre-Approved" to SuccessGreen else "Checking Match" to WarnAmber
+        LocalSchemeStage.APPLIED, LocalSchemeStage.UNDER_VERIFICATION -> "Pending" to WarnAmber
+        LocalSchemeStage.APPROVED -> "Approved" to PrimaryGold
+        LocalSchemeStage.DISBURSED -> "Funds Ready" to InfoBlue
     }
 
-    Box(modifier = Modifier.fillMaxWidth().animateContentSize().clip(RoundedCornerShape(20.dp)).background(CardDark).border(1.dp, if (stage == SchemeStage.DISBURSED) InfoBlue.copy(alpha = 0.5f) else Color(0xFF27272A), RoundedCornerShape(20.dp)).clickable { expanded = !expanded }.padding(20.dp)) {
+    Box(modifier = Modifier.fillMaxWidth().animateContentSize().clip(RoundedCornerShape(20.dp)).background(CardDark).border(1.dp, if (stage == LocalSchemeStage.DISBURSED) InfoBlue.copy(alpha = 0.5f) else Color(0xFF27272A), RoundedCornerShape(20.dp)).clickable { expanded = !expanded }.padding(20.dp)) {
         Column {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(listing.badge, color = PrimaryGold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 Row(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(statusColor.copy(alpha = 0.15f)).padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (stage == SchemeStage.NOT_APPLIED && isPreApproved) { Icon(Icons.Default.Bolt, contentDescription = null, tint = statusColor, modifier = Modifier.size(12.dp)); Spacer(modifier = Modifier.width(2.dp)) }
+                    if (stage == LocalSchemeStage.NOT_APPLIED && isPreApproved) { Icon(Icons.Default.Bolt, contentDescription = null, tint = statusColor, modifier = Modifier.size(12.dp)); Spacer(modifier = Modifier.width(2.dp)) }
                     Text(statusLabel, color = statusColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
@@ -480,8 +498,8 @@ fun SchemeCard(listing: LoanListing, stage: SchemeStage, portfolio: TrustPortfol
             AnimatedVisibility(visible = expanded) {
                 Column {
                     Spacer(modifier = Modifier.height(16.dp))
-                    if (stage != SchemeStage.NOT_APPLIED) {
-                        val stages = listOf(SchemeStage.APPLIED, SchemeStage.UNDER_VERIFICATION, SchemeStage.APPROVED, SchemeStage.DISBURSED)
+                    if (stage != LocalSchemeStage.NOT_APPLIED) {
+                        val stages = listOf(LocalSchemeStage.APPLIED, LocalSchemeStage.UNDER_VERIFICATION, LocalSchemeStage.APPROVED, LocalSchemeStage.DISBURSED)
                         val currentIndex = stages.indexOf(stage).coerceAtLeast(0)
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             stages.forEachIndexed { index, _ ->
@@ -499,26 +517,17 @@ fun SchemeCard(listing: LoanListing, stage: SchemeStage, portfolio: TrustPortfol
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            if (stage == SchemeStage.DISBURSED) {
+            if (stage == LocalSchemeStage.DISBURSED) {
                 Button(onClick = onOpenCard, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = InfoBlue, contentColor = Color.White), shape = RoundedCornerShape(12.dp)) { Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("Open Trust Card", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
             } else {
-                Button(onClick = onApply, enabled = stage == SchemeStage.NOT_APPLIED, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = PrimaryGold, contentColor = BgBlack, disabledContainerColor = Color(0xFF3F3F46)), shape = RoundedCornerShape(12.dp)) { Text(if (stage == SchemeStage.NOT_APPLIED) "Apply for this scheme" else "Application in progress", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+                Button(onClick = onApply, enabled = stage == LocalSchemeStage.NOT_APPLIED, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = PrimaryGold, contentColor = BgBlack, disabledContainerColor = Color(0xFF3F3F46)), shape = RoundedCornerShape(12.dp)) { Text(if (stage == LocalSchemeStage.NOT_APPLIED) "Apply for this scheme" else "Application in progress", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
             }
         }
     }
 }
 
-// ✨ RENAMED TO MarketLoanCard SO NO MORE ERRORS!
 @Composable
-fun MarketLoanCard(
-    title: String,
-    amount: String,
-    rate: String,
-    badge: String,
-    isHighlighted: Boolean = false,
-    ctaLabel: String = "Apply Now",
-    onApply: () -> Unit
-) {
+fun MarketLoanCard(title: String, amount: String, rate: String, badge: String, isHighlighted: Boolean = false, ctaLabel: String = "Apply Now", onApply: () -> Unit) {
     Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(CardDark).border(1.dp, if (isHighlighted) PrimaryGold.copy(alpha = 0.5f) else Color(0xFF27272A), RoundedCornerShape(20.dp)).padding(20.dp)) {
         Column {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -550,8 +559,8 @@ fun OngoingLoanTrackerCard(title: String, loanId: String, totalAmount: Double, o
             Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(20.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column { Text("Outstanding Balance", color = SilverAccent, fontSize = 12.sp); Text(formatTabInr(outstandingAmount), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold) }
-                Column(horizontalAlignment = Alignment.End) { Text("Original Loan", color = SilverAccent, fontSize = 12.sp); Text(formatTabInr(totalAmount), color = SilverAccent, fontSize = 16.sp, fontWeight = FontWeight.Medium) }
+                Column { Text("Outstanding", color = SilverAccent, fontSize = 12.sp); Text(formatTabInr(outstandingAmount), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold) }
+                Column(horizontalAlignment = Alignment.End) { Text("Original", color = SilverAccent, fontSize = 12.sp); Text(formatTabInr(totalAmount), color = SilverAccent, fontSize = 16.sp, fontWeight = FontWeight.Medium) }
             }
             Spacer(modifier = Modifier.height(16.dp))
             LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = SuccessGreen, trackColor = BgBlack)
@@ -606,5 +615,36 @@ fun PendingApplicationTrackerCard(title: String, lender: String, appId: String, 
                 }
             }
         }
+    }
+}
+
+enum class LocalSchemeStage(val label: String) {
+    NOT_APPLIED("Not Applied"),
+    APPLIED("Application Sent"),
+    UNDER_VERIFICATION("Verifying Documents"),
+    APPROVED("Approved"),
+    DISBURSED("Disbursed")
+}
+
+enum class LocalListingCategory { SCHEME, LENDER }
+
+data class LocalLoanListing(
+    val id: String,
+    val category: LocalListingCategory,
+    val title: String,
+    val amount: Double,
+    val rateLabel: String,
+    val badge: String,
+    val explainer: String? = null
+)
+
+object LocalLoanCatalog {
+    fun build(portfolio: TrustPortfolio): List<LocalLoanListing> {
+        return listOf(
+            LocalLoanListing("pm-svanidhi", LocalListingCategory.SCHEME, "PM SVaNidhi Yojana", 50000.0, "7.0% p.a.", "GOVT SCHEME", "Micro-credit facility for street vendors."),
+            LocalLoanListing("mudra-shishu", LocalListingCategory.SCHEME, "PMMY Mudra (Shishu)", 50000.0, "1% / mo", "GOVT SCHEME", "Loans for micro-enterprises and startups."),
+            LocalLoanListing("mfi-1", LocalListingCategory.LENDER, "KreditBee Business", 200000.0, "14% p.a.", "NBFC", "Quick working capital loans for small businesses."),
+            LocalLoanListing("mfi-2", LocalListingCategory.LENDER, "Lendingkart Flexi", 100000.0, "1.5% / mo", "NBFC", "Flexible credit line based on monthly cash flow.")
+        )
     }
 }

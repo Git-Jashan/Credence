@@ -16,9 +16,17 @@ data class TrustPortfolio(
 data class Vitals(
     val incomeConsistency: Int,
     val transactionFrequency: Int,
+
+    // ✨ RESTORED: The Engine and UI need this specific variable for the Cashflow Metric Card
     val inflowOutflowRatio: Double,
+
     val longevityMonths: Int,
-    val payerDiversity: Int
+    val payerDiversity: Int,
+
+    // ✨ KEPT YOUR UPGRADES: Safely tucked at the end with default values so they don't break the Engine
+    val debtToIncomeRatio: Double = 0.0,
+    val bounceCount: Int = 0,
+    val estimatedEMI: Double = 0.0
 )
 
 enum class LoanStatus { ACTIVE, OVERDUE, CLOSED }
