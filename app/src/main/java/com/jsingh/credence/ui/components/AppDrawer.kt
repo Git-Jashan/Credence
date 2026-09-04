@@ -31,9 +31,8 @@ import com.jsingh.credence.domain.models.TrustPortfolio
 import com.jsingh.credence.ui.dialogs.CardSecurityDialog
 import com.jsingh.credence.ui.dialogs.LanguageDialog
 import com.jsingh.credence.ui.dialogs.WipeDataConfirmDialog
+import com.jsingh.credence.ui.dialogs.ExportCertificateDialog // ✨ Imported from our new dedicated file!
 import com.jsingh.credence.ui.sheets.ProfileSettingsSheet
-
-// ✨ IMPORT THE EXISTING SHEET FROM MY SCORE TAB
 import com.jsingh.credence.ui.screens.LinkedAccountsSheet
 
 // 100% Local Colors
@@ -44,7 +43,7 @@ private val SilverAccent = Color(0xFFA1A1AA)
 
 @Composable
 fun CredenceDrawerSheet(
-    portfolio: TrustPortfolio?, // ✨ NEW: We need this to feed your LinkedAccountsSheet
+    portfolio: TrustPortfolio?,
     userName: String,
     businessType: String,
     accountNumber: String,
@@ -53,16 +52,15 @@ fun CredenceDrawerSheet(
     onUploadClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
 
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showCardSecurityDialog by remember { mutableStateOf(false) }
-    var isGeneratingPdf by remember { mutableStateOf(false) }
     var showProfileSheet by remember { mutableStateOf(false) }
     var showWipeConfirmDialog by remember { mutableStateOf(false) }
-
-    // ✨ State to show your existing LinkedAccountsSheet
     var showLinkedAccountsSheet by remember { mutableStateOf(false) }
+
+    // ✨ State for Export Dialog
+    var showExportDialog by remember { mutableStateOf(false) }
 
     ModalDrawerSheet(drawerContainerColor = CardDark, modifier = Modifier.width(320.dp)) {
 
@@ -114,7 +112,6 @@ fun CredenceDrawerSheet(
         // ==================================================
         Column(modifier = Modifier.fillMaxSize().padding(top = 8.dp)) {
 
-            // ✨ OPENS YOUR EXISTING ACCOUNTS SHEET!
             ActionMenuItem(
                 icon = Icons.Default.AccountBalance,
                 title = "Manage & Update Accounts",
@@ -122,24 +119,21 @@ fun CredenceDrawerSheet(
                     if (portfolio != null) {
                         showLinkedAccountsSheet = true
                     } else {
-                        // If no portfolio exists, just go straight to upload
                         onClose()
                         onUploadClick()
                     }
                 }
             )
 
+            // ✨ THE EXPORT TRIGGER
             ActionMenuItem(
                 icon = Icons.Default.PictureAsPdf,
                 title = "Export Trust Certificate",
-                isLoading = isGeneratingPdf,
                 onClick = {
-                    isGeneratingPdf = true
-                    coroutineScope.launch {
-                        delay(1500)
-                        isGeneratingPdf = false
-                        Toast.makeText(context, "Certificate saved to Downloads folder", Toast.LENGTH_LONG).show()
-                        onClose()
+                    if (portfolio != null) {
+                        showExportDialog = true
+                    } else {
+                        Toast.makeText(context, "Please upload a statement to generate a certificate.", Toast.LENGTH_SHORT).show()
                     }
                 }
             )
@@ -181,7 +175,18 @@ fun CredenceDrawerSheet(
     // 3. LAUNCH MODALS & DIALOGS
     // ==================================================
 
-    // ✨ REUSES THE EXACT SHEET FROM MYSCORETAB.KT
+    // ✨ THE EXPORT PDF DIALOG (Now perfectly decoupled!)
+    if (showExportDialog && portfolio != null) {
+        ExportCertificateDialog(
+            userName = userName,
+            portfolio = portfolio,
+            onDismiss = {
+                showExportDialog = false
+                onClose() // Closes sidebar after sharing
+            }
+        )
+    }
+
     if (showLinkedAccountsSheet && portfolio != null) {
         val syncDate = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date()) }
         LinkedAccountsSheet(
@@ -226,7 +231,7 @@ fun CredenceDrawerSheet(
     }
 }
 
-// ✨ ULTRA-MINIMAL ACTION MENU ITEM
+// ULTRA-MINIMAL ACTION MENU ITEM
 @Composable
 fun ActionMenuItem(
     icon: ImageVector,

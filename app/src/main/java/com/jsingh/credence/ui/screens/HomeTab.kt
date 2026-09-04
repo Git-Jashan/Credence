@@ -26,11 +26,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jsingh.credence.domain.models.TrustPortfolio
-import java.text.NumberFormat
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.math.cos
 import kotlin.math.roundToInt
 
 @Composable
@@ -55,6 +54,7 @@ fun HomeTab(
         )
     }
 
+    // Kept your exact 16.dp spacing and 24.dp horizontal padding!
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(BgBlack).padding(horizontal = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -109,7 +109,11 @@ fun HomeTab(
                     Text("See All", color = PrimaryGold, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clickable { onNavigateToActiveLoans() })
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                PortfolioSnapshotCard(onClick = onNavigateToActiveLoans)
+                // ✨ Upgraded to accept both navigation routes
+                PortfolioSnapshotCard(
+                    onNavigateToActiveLoans = onNavigateToActiveLoans,
+                    onNavigateToApplications = onNavigateToApplications
+                )
             }
 
             item {
@@ -122,7 +126,6 @@ fun HomeTab(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // ✨ Hardcoded local offer to eliminate the LoanCatalog "T" error entirely!
                 HomeLoanOfferCard(
                     title = "PM SVaNidhi — Working Capital",
                     amount = formatInr(portfolio.safeLoanLimit),
@@ -143,7 +146,7 @@ fun HomeTab(
 }
 
 // ==========================================
-// ACTION BUTTONS
+// ACTION BUTTONS (With Fake Latency)
 // ==========================================
 @Composable
 fun QuickActionsRow(
@@ -162,18 +165,33 @@ fun QuickActionsRow(
 
 @Composable
 fun QuickActionButton(label: String, icon: ImageVector, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onClick() }) {
+    val scope = rememberCoroutineScope()
+    var isRouting by remember { mutableStateOf(false) }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable {
+        if (!isRouting) {
+            scope.launch {
+                isRouting = true
+                kotlinx.coroutines.delay(500) // ✨ Fake network fetch
+                isRouting = false
+                onClick()
+            }
+        }
+    }) {
         Box(
             modifier = Modifier.size(52.dp).clip(CircleShape).background(CardDark),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = label, tint = PrimaryGold, modifier = Modifier.size(20.dp))
+            if (isRouting) {
+                CircularProgressIndicator(color = PrimaryGold, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+            } else {
+                Icon(icon, contentDescription = label, tint = PrimaryGold, modifier = Modifier.size(20.dp))
+            }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(label, color = SilverAccent, fontSize = 12.sp, fontWeight = FontWeight.Medium)
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CreditSimulatorWidget(dynamicScore: Int, requestedAmount: Double, maxLimit: Float, sliderValue: Float, onSliderChange: (Float) -> Unit) {
@@ -193,7 +211,6 @@ private fun CreditSimulatorWidget(dynamicScore: Int, requestedAmount: Double, ma
                     Text("LOAN ANALYSER", color = SilverAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // ✨ Commas applied automatically here!
                     Text(formatInr(requestedAmount), color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Black, letterSpacing = (-1.5).sp)
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -215,24 +232,83 @@ private fun CreditSimulatorWidget(dynamicScore: Int, requestedAmount: Double, ma
                     Text(text = "$dynamicScore", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            Slider(value = sliderValue, onValueChange = onSliderChange, valueRange = 1000f..maxLimit, modifier = Modifier.height(20.dp), colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = PrimaryGold, inactiveTrackColor = Color(0xFF27272A)))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // ✨ THE FIX: Overriding the track to kill the Material 3 Stop Indicator dot
+            Slider(
+                value = sliderValue,
+                onValueChange = onSliderChange,
+                valueRange = 1000f..maxLimit,
+                modifier = Modifier.height(20.dp),
+                colors = SliderDefaults.colors(
+                    thumbColor = Color.White,
+                    activeTrackColor = PrimaryGold,
+                    inactiveTrackColor = Color(0xFF27272A)
+                ),
+                track = { sliderState ->
+                    SliderDefaults.Track(
+                        colors = SliderDefaults.colors(
+                            activeTrackColor = PrimaryGold,
+                            inactiveTrackColor = Color(0xFF27272A)
+                        ),
+                        sliderState = sliderState,
+                        drawStopIndicator = null // 💀 This murders the yellow dot at the end of the bar
+                    )
+                }
+            )
+
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("₹1,000", color = SilverAccent, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-
-                // ✨ Commas applied automatically here!
                 Text("Limit: ${formatInr(maxLimit.toDouble())}", color = SilverAccent, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
         }
     }
 }
 @Composable
-private fun PortfolioSnapshotCard(onClick: () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(CardDark).clickable { onClick() }.padding(20.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+private fun PortfolioSnapshotCard(onNavigateToActiveLoans: () -> Unit, onNavigateToApplications: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var isSyncing by remember { mutableStateOf(false) }
+    var activeRoute by remember { mutableStateOf<String?>(null) }
+
+    Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(CardDark).padding(20.dp)) {
+
+        // ✨ Fake Live-Sync Header
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (isSyncing) WarnAmber else SuccessGreen))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("LENDER NETWORK", color = SilverAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            }
+
+            if (isSyncing) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(color = PrimaryGold, strokeWidth = 2.dp, modifier = Modifier.size(10.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Syncing...", color = PrimaryGold, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable {
+                    scope.launch { isSyncing = true; kotlinx.coroutines.delay(1500); isSyncing = false }
+                }) {
+                    Icon(Icons.Default.Sync, contentDescription = null, tint = SilverAccent, modifier = Modifier.size(12.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Refresh", color = SilverAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Row 1: Active Loan
+        Row(modifier = Modifier.fillMaxWidth().clickable {
+            if (activeRoute == null) {
+                scope.launch { activeRoute = "loans"; kotlinx.coroutines.delay(700); activeRoute = null; onNavigateToActiveLoans() }
+            }
+        }, verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(InfoBlue.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Payments, contentDescription = null, tint = InfoBlue, modifier = Modifier.size(20.dp))
+                if (activeRoute == "loans") CircularProgressIndicator(color = InfoBlue, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                else Icon(Icons.Default.Payments, contentDescription = null, tint = InfoBlue, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -246,9 +322,15 @@ private fun PortfolioSnapshotCard(onClick: () -> Unit) {
         HorizontalDivider(color = Color(0xFF27272A))
         Spacer(modifier = Modifier.height(16.dp))
 
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        // Row 2: Application
+        Row(modifier = Modifier.fillMaxWidth().clickable {
+            if (activeRoute == null) {
+                scope.launch { activeRoute = "apps"; kotlinx.coroutines.delay(700); activeRoute = null; onNavigateToApplications() }
+            }
+        }, verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(PrimaryGold.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Autorenew, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(20.dp))
+                if (activeRoute == "apps") CircularProgressIndicator(color = PrimaryGold, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                else Icon(Icons.Default.Autorenew, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -273,11 +355,22 @@ private fun DataFreshnessStrip(portfolio: TrustPortfolio, onUpdateClick: () -> U
     }
 }
 
+// ✨ Upgraded Upload Card (Fake Initialization Delay)
 @Composable
 private fun HomeUploadPromptCard(onClick: () -> Unit) {
-    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(CardDark).border(1.dp, Color(0xFF27272A), RoundedCornerShape(20.dp)).clickable { onClick() }.padding(24.dp)) {
+    val scope = rememberCoroutineScope()
+    var isStarting by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(CardDark).border(1.dp, Color(0xFF27272A), RoundedCornerShape(20.dp)).clickable {
+        if (!isStarting) {
+            scope.launch { isStarting = true; kotlinx.coroutines.delay(1000); isStarting = false; onClick() }
+        }
+    }.padding(24.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            Box(modifier = Modifier.size(64.dp).clip(CircleShape).background(Color(0xFF27272A)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, contentDescription = "Upload", tint = PrimaryGold, modifier = Modifier.size(32.dp)) }
+            Box(modifier = Modifier.size(64.dp).clip(CircleShape).background(Color(0xFF27272A)), contentAlignment = Alignment.Center) {
+                if (isStarting) CircularProgressIndicator(color = PrimaryGold, strokeWidth = 3.dp, modifier = Modifier.size(24.dp))
+                else Icon(Icons.Default.Add, contentDescription = "Upload", tint = PrimaryGold, modifier = Modifier.size(32.dp))
+            }
             Spacer(modifier = Modifier.height(16.dp))
             Text("Build Your Trust Score", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
@@ -285,14 +378,29 @@ private fun HomeUploadPromptCard(onClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 6.dp)) { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SilverAccent, modifier = Modifier.size(16.dp)); Spacer(modifier = Modifier.width(12.dp)); Text("Upload a recent 6-month bank statement", color = SilverAccent, fontSize = 13.sp) }
             }
             Spacer(modifier = Modifier.height(24.dp))
-            Button(onClick = onClick, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = PrimaryGold, contentColor = BgBlack), shape = RoundedCornerShape(12.dp)) { Text("Select Statement PDF", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+            Button(
+                onClick = {
+                    if (!isStarting) {
+                        scope.launch { isStarting = true; kotlinx.coroutines.delay(1000); isStarting = false; onClick() }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGold, contentColor = BgBlack),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(if (isStarting) "Initializing Secure Vault..." else "Select Statement PDF", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
         }
     }
 }
 
+// ✨ Upgraded Loan Offer (Fake Pinging API)
 @Composable
 private fun HomeLoanOfferCard(title: String, amount: String, rate: String, badge: String, isHighlighted: Boolean = false, ctaLabel: String = "Apply Now", onApply: () -> Unit) {
-    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if (isHighlighted) Color(0xFF27272A) else CardDark).border(1.dp, if (isHighlighted) PrimaryGold.copy(alpha = 0.5f) else Color(0xFF27272A), RoundedCornerShape(20.dp)).padding(20.dp)) {
+    val scope = rememberCoroutineScope()
+    var isChecking by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if (isHighlighted) Color(0xFF111113) else CardDark).border(1.dp, if (isHighlighted) PrimaryGold.copy(alpha = 0.5f) else Color(0xFF27272A), RoundedCornerShape(20.dp)).padding(20.dp)) {
         Column {
             Text(badge, color = if (isHighlighted) PrimaryGold else SilverAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             Spacer(modifier = Modifier.height(6.dp))
@@ -303,11 +411,33 @@ private fun HomeLoanOfferCard(title: String, amount: String, rate: String, badge
                 Text(rate, color = SuccessGreen, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = onApply, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = if (isHighlighted) PrimaryGold else Color.White, contentColor = BgBlack), shape = RoundedCornerShape(12.dp)) { Text(ctaLabel, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+            Button(
+                onClick = {
+                    scope.launch {
+                        isChecking = true
+                        kotlinx.coroutines.delay(1400) // Fake API negotiation
+                        isChecking = false
+                        onApply()
+                    }
+                },
+                enabled = !isChecking,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = if (isHighlighted) PrimaryGold else Color.White, contentColor = BgBlack),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                if (isChecking) {
+                    CircularProgressIndicator(color = BgBlack, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("Pinging Lenders...", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                } else {
+                    Text(ctaLabel, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            }
         }
     }
 }
 
+// ✨ Upgraded Linked Accounts Sheet (Fake Sync Delays)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeLinkedAccountsSheet(
@@ -318,6 +448,9 @@ private fun HomeLinkedAccountsSheet(
     onUploadClick: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    var isSyncing by remember { mutableStateOf(false) }
+    var isSuccess by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = CardDark) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 40.dp)) {
@@ -344,9 +477,35 @@ private fun HomeLinkedAccountsSheet(
                     HorizontalDivider(color = Color(0xFF27272A))
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column { Text("LAST SYNCED", color = SilverAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp); Spacer(modifier = Modifier.height(2.dp)); Text(syncDate, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium) }
-                        Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(PrimaryGold.copy(alpha = 0.1f)).clickable { onUploadClick() }.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.Sync, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(14.dp)); Spacer(modifier = Modifier.width(6.dp)); Text("Update", color = PrimaryGold, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                        Column { Text("LAST SYNCED", color = SilverAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp); Spacer(modifier = Modifier.height(2.dp)); Text(if (isSuccess) "Just now" else syncDate, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium) }
+
+                        Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(if (isSuccess) SuccessGreen.copy(alpha = 0.1f) else PrimaryGold.copy(alpha = 0.1f)).clickable {
+                            if (!isSyncing && !isSuccess) {
+                                scope.launch {
+                                    isSyncing = true
+                                    kotlinx.coroutines.delay(2200)
+                                    isSyncing = false
+                                    isSuccess = true
+                                    kotlinx.coroutines.delay(1000)
+                                    onUploadClick()
+                                }
+                            }
+                        }.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (isSyncing) {
+                                    CircularProgressIndicator(color = PrimaryGold, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Syncing...", color = PrimaryGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                } else if (isSuccess) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Synced", color = SuccessGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                } else {
+                                    Icon(Icons.Default.Sync, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Update", color = PrimaryGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
                 }
