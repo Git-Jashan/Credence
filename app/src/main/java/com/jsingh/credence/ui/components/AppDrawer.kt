@@ -20,22 +20,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-// Import your existing models and Dialogs/Sheets
 import com.jsingh.credence.domain.models.TrustPortfolio
 import com.jsingh.credence.ui.dialogs.CardSecurityDialog
 import com.jsingh.credence.ui.dialogs.LanguageDialog
 import com.jsingh.credence.ui.dialogs.WipeDataConfirmDialog
-import com.jsingh.credence.ui.dialogs.ExportCertificateDialog // ✨ Imported from our new dedicated file!
+import com.jsingh.credence.ui.dialogs.ExportCertificateDialog
 import com.jsingh.credence.ui.sheets.ProfileSettingsSheet
 import com.jsingh.credence.ui.screens.LinkedAccountsSheet
 
-// 100% Local Colors
 private val BgBlack = Color(0xFF09090B)
 private val CardDark = Color(0xFF18181B)
 private val PrimaryGold = Color(0xFFEAB308)
@@ -58,8 +53,6 @@ fun CredenceDrawerSheet(
     var showProfileSheet by remember { mutableStateOf(false) }
     var showWipeConfirmDialog by remember { mutableStateOf(false) }
     var showLinkedAccountsSheet by remember { mutableStateOf(false) }
-
-    // ✨ State for Export Dialog
     var showExportDialog by remember { mutableStateOf(false) }
 
     ModalDrawerSheet(drawerContainerColor = CardDark, modifier = Modifier.width(320.dp)) {
@@ -125,7 +118,6 @@ fun CredenceDrawerSheet(
                 }
             )
 
-            // ✨ THE EXPORT TRIGGER
             ActionMenuItem(
                 icon = Icons.Default.PictureAsPdf,
                 title = "Export Trust Certificate",
@@ -166,7 +158,7 @@ fun CredenceDrawerSheet(
             Spacer(modifier = Modifier.weight(1f))
 
             Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                Text("Credence v1.2.0", color = Color(0xFF3F3F46), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text("Credence v1.0.0", color = Color(0xFF3F3F46), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -175,14 +167,13 @@ fun CredenceDrawerSheet(
     // 3. LAUNCH MODALS & DIALOGS
     // ==================================================
 
-    // ✨ THE EXPORT PDF DIALOG (Now perfectly decoupled!)
     if (showExportDialog && portfolio != null) {
         ExportCertificateDialog(
             userName = userName,
             portfolio = portfolio,
             onDismiss = {
                 showExportDialog = false
-                onClose() // Closes sidebar after sharing
+                onClose()
             }
         )
     }

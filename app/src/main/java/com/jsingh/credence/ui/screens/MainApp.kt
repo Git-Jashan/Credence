@@ -150,7 +150,6 @@ fun CredenceDashboard(
     var parseError by remember { mutableStateOf<String?>(null) }
     var showBankSelector by remember { mutableStateOf(false) }
 
-    // ✨ DEEP LINKING STATES FOR SCHEMES TAB
     var schemesDefaultTab by remember { mutableIntStateOf(0) } // 0 = Discover, 1 = Track
     var schemesDefaultSubTab by remember { mutableIntStateOf(0) } // 0 = Active, 1 = Apps
 
@@ -238,12 +237,10 @@ fun CredenceDashboard(
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 when (selectedTab) {
-                    // ✨ 1. PERFECTLY WIRED HOME TAB ROUTING
                     0 -> HomeTab(
                         portfolio = portfolio,
                         userName = userName,
                         onUploadClick = { showBankSelector = true },
-                        // 👇 REMOVED THE OLD "onNavigateToLoans" SO IT COMPILES
                         onNavigateToMarket = {
                             schemesDefaultTab = 0 // Discover Tab
                             selectedTab = 1
@@ -259,7 +256,6 @@ fun CredenceDashboard(
                             selectedTab = 1
                         }
                     )
-                    // ✨ 2. SCHEMES TAB CATCHES THE STATES
                     1 -> SchemesAndLendersTab(
                         portfolio = portfolio,
                         defaultTab = schemesDefaultTab,

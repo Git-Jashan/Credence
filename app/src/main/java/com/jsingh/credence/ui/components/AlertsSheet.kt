@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jsingh.credence.domain.models.TrustPortfolio
 
-// 100% Local Colors
 private val BgBlack = Color(0xFF09090B)
 private val CardDark = Color(0xFF18181B)
 private val PrimaryGold = Color(0xFFEAB308)
@@ -44,7 +43,6 @@ fun AlertsSheet(portfolio: TrustPortfolio?, onDismiss: () -> Unit) {
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
 
-            // ✨ UPGRADED HEADER: Includes Unread Badge and Mark Read action
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -67,7 +65,6 @@ fun AlertsSheet(portfolio: TrustPortfolio?, onDismiss: () -> Unit) {
             }
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ✨ UPGRADED EMPTY STATE
             if (portfolio == null) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp),
@@ -82,9 +79,6 @@ fun AlertsSheet(portfolio: TrustPortfolio?, onDismiss: () -> Unit) {
                     Text("Connect your bank statement to unlock\ncapital and receive personalized alerts.", color = SilverAccent, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 18.sp)
                 }
             } else {
-                // ✨ UPGRADED ACTIONABLE ALERTS
-
-                // Critical Alert with Primary Action
                 AlertItem(
                     icon = Icons.Default.WarningAmber,
                     iconColor = WarnAmber,
@@ -93,10 +87,9 @@ fun AlertsSheet(portfolio: TrustPortfolio?, onDismiss: () -> Unit) {
                     time = "10m ago",
                     isUnread = true,
                     actionLabel = "Start Video KYC",
-                    onActionClick = { /* Launch KYC */ }
+                    onActionClick = {}
                 )
 
-                // Positive Alert with Secondary Action
                 AlertItem(
                     icon = Icons.Default.Verified,
                     iconColor = SuccessGreen,
@@ -106,11 +99,10 @@ fun AlertsSheet(portfolio: TrustPortfolio?, onDismiss: () -> Unit) {
                     isUnread = true,
                     actionLabel = "View New Limits",
                     isPrimaryAction = false,
-                    onActionClick = { /* Navigate to Score */ }
+                    onActionClick = {  }
                 )
 
-                // Informational Alert
-                AlertItem(
+                 AlertItem(
                     icon = Icons.Default.Event,
                     iconColor = InfoBlue,
                     title = "Upcoming Auto-Debit",
@@ -119,14 +111,13 @@ fun AlertsSheet(portfolio: TrustPortfolio?, onDismiss: () -> Unit) {
                     isUnread = true,
                     actionLabel = "Manage Mandate",
                     isPrimaryAction = false,
-                    onActionClick = { /* Manage Mandate */ }
+                    onActionClick = { }
                 )
             }
         }
     }
 }
 
-// ✨ THE "COOKED" ALERT ITEM: Supports Unread dots, interactive buttons, and premium borders
 @Composable
 private fun AlertItem(
     icon: ImageVector,
@@ -150,7 +141,6 @@ private fun AlertItem(
             .padding(16.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-            // Unread Dot Indicator
             if (isUnread) {
                 Box(modifier = Modifier.padding(top = 16.dp, end = 12.dp).size(6.dp).clip(CircleShape).background(iconColor))
             } else {

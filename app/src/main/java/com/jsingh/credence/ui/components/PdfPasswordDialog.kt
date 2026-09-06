@@ -34,7 +34,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// --- THEME COLORS ---
 private val CardDark = Color(0xFF18181B)
 private val SilverAccent = Color(0xFFA1A1AA)
 private val PrimaryNeon = Color(0xFFEAB308)
@@ -64,7 +63,6 @@ fun PdfPasswordDialog(
         try {
             focusRequester.requestFocus()
         } catch (e: Exception) {
-            // Ignore focus race conditions
         }
     }
 
@@ -197,7 +195,6 @@ private suspend fun extractTextFromPdf(context: Context, uri: Uri, password: Str
                 ?: return@withContext "ERROR_FILE_NOT_FOUND"
 
             inputStream.use { stream ->
-                // Load PDF document directly with password support
                 PDDocument.load(stream, password).use { document ->
                     val stripper = PDFTextStripper()
                     stripper.sortByPosition = true

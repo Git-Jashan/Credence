@@ -54,7 +54,6 @@ fun HomeTab(
         )
     }
 
-    // Kept your exact 16.dp spacing and 24.dp horizontal padding!
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(BgBlack).padding(horizontal = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -109,7 +108,6 @@ fun HomeTab(
                     Text("See All", color = PrimaryGold, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clickable { onNavigateToActiveLoans() })
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                // ✨ Upgraded to accept both navigation routes
                 PortfolioSnapshotCard(
                     onNavigateToActiveLoans = onNavigateToActiveLoans,
                     onNavigateToApplications = onNavigateToApplications
@@ -146,7 +144,7 @@ fun HomeTab(
 }
 
 // ==========================================
-// ACTION BUTTONS (With Fake Latency)
+// ACTION BUTTONS
 // ==========================================
 @Composable
 fun QuickActionsRow(
@@ -234,7 +232,6 @@ private fun CreditSimulatorWidget(dynamicScore: Int, requestedAmount: Double, ma
             }
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ✨ THE FIX: Overriding the track to kill the Material 3 Stop Indicator dot
             Slider(
                 value = sliderValue,
                 onValueChange = onSliderChange,
@@ -252,7 +249,7 @@ private fun CreditSimulatorWidget(dynamicScore: Int, requestedAmount: Double, ma
                             inactiveTrackColor = Color(0xFF27272A)
                         ),
                         sliderState = sliderState,
-                        drawStopIndicator = null // 💀 This murders the yellow dot at the end of the bar
+                        drawStopIndicator = null
                     )
                 }
             )
@@ -273,7 +270,6 @@ private fun PortfolioSnapshotCard(onNavigateToActiveLoans: () -> Unit, onNavigat
 
     Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(CardDark).padding(20.dp)) {
 
-        // ✨ Fake Live-Sync Header
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (isSyncing) WarnAmber else SuccessGreen))
@@ -355,7 +351,6 @@ private fun DataFreshnessStrip(portfolio: TrustPortfolio, onUpdateClick: () -> U
     }
 }
 
-// ✨ Upgraded Upload Card (Fake Initialization Delay)
 @Composable
 private fun HomeUploadPromptCard(onClick: () -> Unit) {
     val scope = rememberCoroutineScope()
@@ -394,7 +389,6 @@ private fun HomeUploadPromptCard(onClick: () -> Unit) {
     }
 }
 
-// ✨ Upgraded Loan Offer (Fake Pinging API)
 @Composable
 private fun HomeLoanOfferCard(title: String, amount: String, rate: String, badge: String, isHighlighted: Boolean = false, ctaLabel: String = "Apply Now", onApply: () -> Unit) {
     val scope = rememberCoroutineScope()
@@ -437,7 +431,6 @@ private fun HomeLoanOfferCard(title: String, amount: String, rate: String, badge
     }
 }
 
-// ✨ Upgraded Linked Accounts Sheet (Fake Sync Delays)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeLinkedAccountsSheet(

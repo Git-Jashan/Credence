@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.launch
 
-// 100% Local Colors
 private val BgBlack = Color(0xFF09090B)
 private val CardDark = Color(0xFF18181B)
 private val PrimaryGold = Color(0xFFEAB308)
@@ -39,7 +38,6 @@ fun LanguageDialog(onDismiss: () -> Unit) {
 
     var selectedLang by remember { mutableStateOf("English") }
 
-    // ✨ FAKE LOCALIZATION ENGINE STATE
     var isApplying by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = { if (!isApplying) onDismiss() }) {
@@ -51,7 +49,6 @@ fun LanguageDialog(onDismiss: () -> Unit) {
                 .border(1.dp, Color(0xFF27272A), RoundedCornerShape(24.dp))
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                // ✨ PREMIUM HEADER
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
@@ -72,7 +69,6 @@ fun LanguageDialog(onDismiss: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // ✨ SELECTABLE LANGUAGE CARDS
                 val languages = listOf(
                     Pair("English", "English"),
                     Pair("हिन्दी", "Hindi")
@@ -103,7 +99,6 @@ fun LanguageDialog(onDismiss: () -> Unit) {
                             Text(englishName, color = SilverAccent, fontSize = 12.sp)
                         }
 
-                        // Custom Radio Checkmark
                         if (isSelected) {
                             Icon(Icons.Default.Check, contentDescription = null, tint = PrimaryGold, modifier = Modifier.size(22.dp))
                         } else {
@@ -114,7 +109,6 @@ fun LanguageDialog(onDismiss: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // ✨ ACTION BUTTONS WITH FAKE LOADING
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                     TextButton(
                         onClick = onDismiss,

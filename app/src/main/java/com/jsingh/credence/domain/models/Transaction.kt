@@ -9,9 +9,9 @@ data class Transaction(
     val time: String,
     val timestamp: Long,
     val merchantName: String,
-    val transactionType: String, // e.g., "BANK", "UPI"
+    val transactionType: String,
     val account: String,
-    val source: String,          // e.g., "STATEMENT"
+    val source: String,
     val phoneNumber: String? = null,
     val balance: Double? = null
 )

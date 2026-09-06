@@ -94,7 +94,6 @@ fun OnboardingFlow(
             onSuccess = { rawText ->
                 showPasswordDialog = false
                 onClearIncomingUri()
-                // Name should now be extracted from rawText inside StatementParser
                 onFinishOnboarding(rawText)
             }
         )

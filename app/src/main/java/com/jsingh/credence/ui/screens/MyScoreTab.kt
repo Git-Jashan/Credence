@@ -297,7 +297,7 @@ fun MyScoreTab(
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.Security, contentDescription = null, tint = Color(0xFF3F3F46), modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Credence Zero-Knowledge Engine v2.0", color = Color(0xFF3F3F46), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+                    Text("Credence Zero-Knowledge Engine v1.0.0", color = Color(0xFF3F3F46), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
                     Text("Data parsed locally. Never stored on external servers.", color = Color(0xFF3F3F46), fontSize = 10.sp)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -327,7 +327,6 @@ private fun ScoreUploadPromptCard(onClick: () -> Unit) {
     }
 }
 
-// ✨ THE UPGRADED DIGITAL ID SHEET (Massive Edge-to-Edge QR)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DigitalIdQrSheet(userName: String, credenceId: String, portfolio: TrustPortfolio, syncDate: String, onDismiss: () -> Unit) {
@@ -337,7 +336,6 @@ fun DigitalIdQrSheet(userName: String, credenceId: String, portfolio: TrustPortf
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
 
-    // ✨ FAKE CRYPTOGRAPHIC QR DELAY
     var isGeneratingQr by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(1500)
@@ -345,7 +343,6 @@ fun DigitalIdQrSheet(userName: String, credenceId: String, portfolio: TrustPortf
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
     }
 
-    // ✨ FAKE PDF GENERATION DELAY
     var isGeneratingPdf by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = CardDark) {
@@ -356,7 +353,6 @@ fun DigitalIdQrSheet(userName: String, credenceId: String, portfolio: TrustPortf
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ✨ MASSIVE QR CONTAINER
             Box(modifier = Modifier.size(240.dp).clip(RoundedCornerShape(20.dp)).background(Color.White).padding(16.dp), contentAlignment = Alignment.Center) {
                 if (isGeneratingQr) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -375,7 +371,6 @@ fun DigitalIdQrSheet(userName: String, credenceId: String, portfolio: TrustPortf
             Spacer(modifier = Modifier.height(24.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                // ✨ PDF EXPORT BUTTON
                 Button(
                     onClick = {
                         if (!isGeneratingPdf) {
@@ -472,7 +467,6 @@ fun FactorBar(label: String, value: Float, display: String, description: String,
     }
 }
 
-// ✨ UPGRADED LINKED ACCOUNTS (Fake Sync Delays)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LinkedAccountsSheet(portfolio: TrustPortfolio, accountNumber: String, syncDate: String, onDismiss: () -> Unit, onUploadClick: () -> Unit) {

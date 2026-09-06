@@ -781,7 +781,6 @@ fun SchemeCard(listing: LocalLoanListing, stage: LocalSchemeStage, portfolio: Tr
     }
 }
 
-// ✨ MarketLoanCard
 @Composable
 fun MarketLoanCard(listing: LocalLoanListing, isHighlighted: Boolean = false, ctaLabel: String = "Apply Now", onApply: () -> Unit) {
     val isPending = ctaLabel != "Apply Now"
@@ -826,7 +825,6 @@ fun MarketLoanCard(listing: LocalLoanListing, isHighlighted: Boolean = false, ct
     }
 }
 
-// ✨ ULTIMATE REALISM: Active Ledger Tracker
 @Composable
 fun OngoingLoanTrackerCard(title: String, loanId: String, totalAmount: Double, outstandingAmount: Double, progress: Float, nextEmiAmt: String, nextEmiDate: String, onOpenCard: () -> Unit, onPayEmi: () -> Unit) {
     val scope = rememberCoroutineScope()
@@ -857,7 +855,6 @@ fun OngoingLoanTrackerCard(title: String, loanId: String, totalAmount: Double, o
                 Column(horizontalAlignment = Alignment.End) { Text("Original", color = SilverAccent, fontSize = 13.sp); Spacer(modifier = Modifier.height(4.dp)); Text(formatInr(totalAmount), color = SilverAccent, fontSize = 16.sp, fontWeight = FontWeight.Medium) }
             }
             Spacer(modifier = Modifier.height(20.dp))
-            // ✨ THICK ROUNDED PROGRESS BAR
             LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)), color = SuccessGreen, trackColor = BgBlack, strokeCap = StrokeCap.Round)
             Spacer(modifier = Modifier.height(10.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -1074,7 +1071,6 @@ fun PendingApplicationTrackerCard(title: String, lender: String, appId: String, 
             DashedDivider(color = Color(0xFF27272A))
             Spacer(modifier = Modifier.height(20.dp))
 
-            // ✨ UPGRADED FOOTER ACTIONS (Soft-Chips)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
 
                 // Withdraw App Chip

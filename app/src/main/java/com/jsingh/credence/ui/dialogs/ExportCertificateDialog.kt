@@ -37,7 +37,6 @@ import java.util.Locale
 import java.util.UUID
 import kotlin.math.roundToInt
 
-// Local Colors
 private val CardDark = Color(0xFF18181B)
 private val PrimaryGold = Color(0xFFEAB308)
 private val SilverAccent = Color(0xFFA1A1AA)
@@ -61,13 +60,10 @@ fun ExportCertificateDialog(userName: String, portfolio: TrustPortfolio, onDismi
 
     LaunchedEffect(Unit) {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        // Simulate step 1
         delay(800)
         step = 1
-        // Simulate step 2
         delay(900)
         step = 2
-        // Simulate step 3 (Actual PDF Gen)
         delay(700)
 
         try {
@@ -83,13 +79,12 @@ fun ExportCertificateDialog(userName: String, portfolio: TrustPortfolio, onDismi
             val file = java.io.File(context.cacheDir, "Credence_Report_$credenceId.pdf")
             pdfDoc.writeTo(java.io.FileOutputStream(file))
             pdfDoc.close()
-        } catch (e: Exception) { /* Silently ignore if cache access fails in demo */ }
+        } catch (e: Exception) {}
 
         step = 3
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        delay(400) // Brief pause to show "Ready to Share!"
+        delay(400)
 
-        // Fire Intent
         val formatter = NumberFormat.getNumberInstance(Locale("en", "IN"))
         val formattedLimit = "₹${formatter.format(portfolio.safeLoanLimit.roundToInt())}"
 
@@ -100,7 +95,7 @@ fun ExportCertificateDialog(userName: String, portfolio: TrustPortfolio, onDismi
         onDismiss()
     }
 
-    Dialog(onDismissRequest = { /* Prevent dismiss while generating */ }) {
+    Dialog(onDismissRequest = { }) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = CardDark,
