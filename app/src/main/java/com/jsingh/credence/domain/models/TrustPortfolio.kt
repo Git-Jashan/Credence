@@ -1,5 +1,4 @@
 package com.jsingh.credence.domain.models
-
 data class TrustPortfolio(
     val score: Int,
     val previousScore: Int? = null,
@@ -10,7 +9,9 @@ data class TrustPortfolio(
     val activeLoans: List<ActiveLoan> = emptyList(),
     val bankName: String = "Bank statement",
     val statementPeriodLabel: String = "",
-    val statementMonths: Int = 0
+    val statementMonths: Int = 0,
+    val confidenceLevel: String = "",   // NEW: "High", "Medium", or "Low" based on data depth
+    val decisionNarrative: String = ""  // NEW: The plain-English "Why" for the lender/borrower
 )
 
 data class Vitals(
@@ -21,12 +22,12 @@ data class Vitals(
     val payerDiversity: Int,
     val debtToIncomeRatio: Double = 0.0,
     val bounceCount: Int = 0,
-    val estimatedEMI: Double = 0.0
+    val estimatedEMI: Double = 0.0,
+    val avgMinBalance: Double = 0.0 // NEW: Tracks the safety cash cushion
 )
 
 enum class LoanStatus { ACTIVE, OVERDUE, CLOSED }
 
-/** A loan the user currently has running, surfaced on both Home and the Profile ("My Score") tab. */
 data class ActiveLoan(
     val id: String,
     val lenderName: String,

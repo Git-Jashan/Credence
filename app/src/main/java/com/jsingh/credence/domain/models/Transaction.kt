@@ -12,6 +12,6 @@ data class Transaction(
     val transactionType: String,
     val account: String,
     val source: String,
-    val phoneNumber: String? = null,
-    val balance: Double? = null
+    val phoneNumber: String?,
+    val runningBalance: Double
 )

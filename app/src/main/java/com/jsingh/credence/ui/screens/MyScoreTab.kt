@@ -31,8 +31,11 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jsingh.credence.domain.models.TrustPortfolio
@@ -151,18 +154,41 @@ fun MyScoreTab(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                        Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BgBlack).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column {
+                        // ✨ FIXED: Removed IntrinsicSize, prevented text wrapping, adjusted weights
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(BgBlack)
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Gave more weight (1.2f) to the left so the bank name fits
+                            Column(modifier = Modifier.weight(1.2f)) {
                                 Text("DATA SOURCE", color = SilverAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text("${portfolio.bankName} (${portfolio.statementMonths}Mos)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "${portfolio.bankName} (${portfolio.statementMonths}M)", // Changed "Mos" to "M"
+                                    color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis // Prevents wrapping
+                                )
                             }
-                            Box(modifier = Modifier.height(24.dp).width(1.dp).background(Color(0xFF27272A)))
-                            Column(horizontalAlignment = Alignment.End) {
+
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .height(32.dp) // Fixed height to stop vertical stretching
+                                    .width(1.dp)
+                                    .background(Color(0xFF27272A))
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Column(modifier = Modifier.weight(0.8f), horizontalAlignment = Alignment.End) {
                                 Text("LAST SYNCED", color = SilverAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                                Spacer(modifier = Modifier.height(2.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(syncDate, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
@@ -191,10 +217,61 @@ fun MyScoreTab(
                 }
             }
 
-            // 3. KEY METRICS GRID
+            // 3. KEY METRICS GRID & ACTIONABLE NARRATIVE
             item {
                 Text("Underwriting Summary", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(16.dp))
+
+                // ✨ FIXED: Styled Narrative Box without Emojis
+                val rawNarrative = portfolio.decisionNarrative
+                if (rawNarrative.isNotBlank()) {
+                    val isWarning = rawNarrative.contains("🔴") || rawNarrative.contains("🟡")
+                    val bgColor = if (isWarning) Color(0xFF3F1919) else Color(0xFF062C17)
+                    val borderColor = if (isWarning) DangerRed else SuccessGreen
+                    val normalColor = if (isWarning) Color(0xFFFCA5A5) else Color(0xFF86EFAC)
+                    val boldColor = if (isWarning) DangerRed else SuccessGreen
+
+                    // Clean out emojis dynamically
+                    val cleanNarrative = rawNarrative.replace(Regex("[🔴🟡🟢]\\s*"), "")
+
+                    // Split at the colon to make the heading bold
+                    val splitParts = cleanNarrative.split(":", limit = 2)
+
+                    val styledNarrative = buildAnnotatedString {
+                        if (splitParts.size == 2) {
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = boldColor)) {
+                                append(splitParts[0] + ":")
+                            }
+                            withStyle(SpanStyle(color = normalColor)) {
+                                append(splitParts[1])
+                            }
+                        } else {
+                            withStyle(SpanStyle(color = normalColor)) {
+                                append(cleanNarrative)
+                            }
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp, bottom = 4.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(bgColor)
+                            .border(1.dp, borderColor.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                    ) {
+                        Text(
+                            text = styledNarrative,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(16.dp),
+                            lineHeight = 18.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     MetricGridCard(
                         modifier = Modifier.weight(1f),
@@ -207,7 +284,7 @@ fun MyScoreTab(
                     MetricGridCard(
                         modifier = Modifier.weight(1f),
                         title = "Safe Limit",
-                        value = formatInr(portfolio.safeLoanLimit), // ✨ using global formatter
+                        value = formatInr(portfolio.safeLoanLimit),
                         subtitle = "${portfolio.statementMonths} Mos Data",
                         icon = Icons.Default.AccountBalanceWallet,
                         color = PrimaryGold
@@ -216,7 +293,7 @@ fun MyScoreTab(
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     val ratio = portfolio.vitals.inflowOutflowRatio
-                    val ratioColor = if (ratio >= 1.2) SuccessGreen else if (ratio >= 1.0) WarnAmber else DangerRed
+                    val ratioColor = if (ratio >= 1.2) SuccessGreen else if (ratio >= 1.0) Color(0xFFF59E0B) else DangerRed
                     MetricGridCard(
                         modifier = Modifier.weight(1f),
                         title = "Cashflow",
@@ -227,12 +304,12 @@ fun MyScoreTab(
                     )
 
                     val dti = portfolio.vitals.debtToIncomeRatio
-                    val dtiColor = if (dti < 0.3) SuccessGreen else if (dti < 0.5) WarnAmber else DangerRed
+                    val dtiColor = if (dti < 0.3) SuccessGreen else if (dti < 0.5) Color(0xFFF59E0B) else DangerRed
                     MetricGridCard(
                         modifier = Modifier.weight(1f),
                         title = "Debt Burden",
                         value = "${(dti * 100).roundToInt()}%",
-                        subtitle = "Est. EMI: ${formatInr(portfolio.vitals.estimatedEMI)}", // ✨ using global formatter
+                        subtitle = "Est. EMI: ${formatInr(portfolio.vitals.estimatedEMI)}",
                         icon = Icons.Default.TrendingDown,
                         color = dtiColor
                     )
@@ -247,8 +324,18 @@ fun MyScoreTab(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 
+                val liquidityProgress = (portfolio.vitals.avgMinBalance.toFloat() / 15000f).coerceIn(0f, 1f)
+                FactorBar(
+                    label = "Liquidity Cushion",
+                    value = liquidityProgress,
+                    display = formatInr(portfolio.vitals.avgMinBalance),
+                    description = "Average lowest balance before restocking. Proves capacity to absorb EMI deductions safely.",
+                    color = SuccessGreen
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
                 val consistencyProgress = (portfolio.vitals.incomeConsistency.toFloat() / 100f).coerceIn(0f, 1f)
-                FactorBar("Income Consistency", consistencyProgress, "${portfolio.vitals.incomeConsistency}%", "Low monthly volatility confirms predictable cashflow for lenders.", SuccessGreen)
+                FactorBar("Income Consistency", consistencyProgress, "${portfolio.vitals.incomeConsistency}%", "Low monthly volatility confirms predictable cashflow for lenders.", Color(0xFF10B981))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 val diversityProgress = (portfolio.vitals.payerDiversity.toFloat() / 15f).coerceIn(0f, 1f)
@@ -361,7 +448,6 @@ fun DigitalIdQrSheet(userName: String, credenceId: String, portfolio: TrustPortf
                         Text("Generating Secure\nZero-Knowledge Hash...", color = BgBlack, fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     }
                 } else {
-                    // Frame tightly hugs the massive edge-to-edge QR icon
                     Box(modifier = Modifier.fillMaxSize().border(2.dp, Color(0xFFE4E4E7), RoundedCornerShape(12.dp)).padding(12.dp), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.QrCode2, contentDescription = "QR Code", tint = BgBlack, modifier = Modifier.fillMaxSize())
                     }
@@ -377,7 +463,7 @@ fun DigitalIdQrSheet(userName: String, credenceId: String, portfolio: TrustPortf
                             scope.launch {
                                 isGeneratingPdf = true
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                kotlinx.coroutines.delay(1800) // Fake PDF Build Time
+                                kotlinx.coroutines.delay(1800)
 
                                 try {
                                     val pdfDoc = android.graphics.pdf.PdfDocument()
@@ -392,7 +478,7 @@ fun DigitalIdQrSheet(userName: String, credenceId: String, portfolio: TrustPortf
                                     val file = java.io.File(context.cacheDir, "Credence_Report_$credenceId.pdf")
                                     pdfDoc.writeTo(java.io.FileOutputStream(file))
                                     pdfDoc.close()
-                                } catch (e: Exception) { /* Silently fail if cache access is denied */ }
+                                } catch (e: Exception) { }
 
                                 isGeneratingPdf = false
 
@@ -502,7 +588,7 @@ fun LinkedAccountsSheet(portfolio: TrustPortfolio, accountNumber: String, syncDa
                             if (!isSyncing && !isSuccess) {
                                 scope.launch {
                                     isSyncing = true
-                                    kotlinx.coroutines.delay(2200) // Fake Handshake
+                                    kotlinx.coroutines.delay(2200)
                                     isSyncing = false
                                     isSuccess = true
                                     kotlinx.coroutines.delay(1000)
